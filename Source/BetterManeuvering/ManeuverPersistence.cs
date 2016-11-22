@@ -21,9 +21,9 @@ namespace BetterManeuvering
 		[Persistent]
 		public int accuracy = 2;
 		[Persistent]
-		public bool manualControls = true;
+		public bool replaceGizmoButtons = true;
 		[Persistent]
-		public bool maneuverSnap = true;
+		public bool rememberManualInput = true;
 		[Persistent]
 		public bool useKeyboard = true;
 		[Persistent]
@@ -74,8 +74,8 @@ namespace BetterManeuvering
 				maxScale = settings.maxScale;
 				alignToOrbit = settings.alignToOrbit;
 				accuracy = settings.accuracy;
-				manualControls = settings.manualControls;
-				maneuverSnap = settings.maneuverSnap;
+				replaceGizmoButtons = settings.replaceGizmoButtons;
+				rememberManualInput = settings.rememberManualInput;
 				useKeyboard = settings.useKeyboard;
 
 				if (Save())
