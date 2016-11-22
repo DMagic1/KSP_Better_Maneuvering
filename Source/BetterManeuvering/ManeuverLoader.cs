@@ -6,17 +6,26 @@ using BetterManeuvering.Unity;
 
 namespace BetterManeuvering
 {
-	[KSPAddon(KSPAddon.Startup.EveryScene, false)]
+	[KSPAddon(KSPAddon.Startup.Flight, false)]
 	public class ManeuverLoader : MonoBehaviour
 	{
 		private static bool loaded;
 		private static bool TMPLoaded;
 		private static bool UILoaded;
+		private static bool TexturesLoaded;
 
 		private static GameObject[] loadedPrefabs;
 
 		private static GameObject _inputPrefab;
 		private static GameObject _snapPrefab;
+
+		private static Sprite _inputButtonNormal;
+		private static Sprite _inputButtonHighlight;
+		private static Sprite _inputButtonActive;
+
+		private static Sprite _snapButtonNormal;
+		private static Sprite _snapButtonHighlight;
+		private static Sprite _snapButtonActive;
 
 		private static Sprite ButtonNormal;
 		private static Sprite ButtonHighlight;
@@ -74,6 +83,36 @@ namespace BetterManeuvering
 			get { return _lineMaterial; }
 		}
 
+		public static Sprite InputButtonNormal
+		{
+			get { return _inputButtonNormal; }
+		}
+
+		public static Sprite InputButtonHighlight
+		{
+			get { return _inputButtonHighlight; }
+		}
+
+		public static Sprite InputButtonActive
+		{
+			get { return _inputButtonActive; }
+		}
+
+		public static Sprite SnapButtonNormal
+		{
+			get { return _snapButtonNormal; }
+		}
+
+		public static Sprite SnapButtonHighlight
+		{
+			get { return _snapButtonHighlight; }
+		}
+
+		public static Sprite SnapButtonActive
+		{
+			get { return _snapButtonActive; }
+		}
+
 		private void Start()
 		{
 			if (loaded)
@@ -98,10 +137,43 @@ namespace BetterManeuvering
 					processUIPrefabs();
 			}
 
-			if (TMPLoaded && UILoaded)
+			if (!TexturesLoaded)
+			{
+				loadTextures();
+			}
+
+			if (TMPLoaded && UILoaded && TexturesLoaded)
 				loaded = true;
 
 			Destroy(gameObject);
+		}
+
+		private void loadTextures()
+		{
+			Texture2D inputNormal = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Input_Normal", false);
+			Texture2D inputHighlight = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Input_Highlight", false);
+			Texture2D inputActive = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Input_Active", false);
+
+			Texture2D snapNormal = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Snap_Normal", false);
+			Texture2D snapHighlight = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Snap_Highlight", false);
+			Texture2D snapActive = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Snap_Active", false);
+
+			if (inputNormal != null && inputHighlight != null && inputActive != null)
+			{
+				_inputButtonNormal = Sprite.Create(inputNormal, new Rect(0, 0, inputNormal.width, inputNormal.height), new Vector2(0.5f, 0.5f));
+				_inputButtonHighlight = Sprite.Create(inputHighlight, new Rect(0, 0, inputHighlight.width, inputHighlight.height), new Vector2(0.5f, 0.5f));
+				_inputButtonActive = Sprite.Create(inputActive, new Rect(0, 0, inputActive.width, inputActive.height), new Vector2(0.5f, 0.5f));
+			}
+
+			if (snapNormal != null && snapHighlight != null && snapActive != null)
+			{
+				_snapButtonNormal = Sprite.Create(snapNormal, new Rect(0, 0, snapNormal.width, snapNormal.height), new Vector2(0.5f, 0.5f));
+				_snapButtonHighlight = Sprite.Create(snapHighlight, new Rect(0, 0, snapHighlight.width, snapHighlight.height), new Vector2(0.5f, 0.5f));
+				_snapButtonActive = Sprite.Create(snapActive, new Rect(0, 0, snapActive.width, snapActive.height), new Vector2(0.5f, 0.5f));
+			}
+
+			if (_inputButtonNormal != null && _inputButtonHighlight != null && _inputButtonActive != null && _snapButtonNormal != null && _snapButtonHighlight != null && _snapButtonActive != null)
+				TexturesLoaded = true;
 		}
 
 		private void processTMPPrefabs()
