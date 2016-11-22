@@ -13,8 +13,18 @@ namespace BetterManeuvering
 		private ManeuverNode _node;
 		private ManeuverGizmo _gizmo;
 		private int _index;
+		private bool _locked;
+		private bool _hover;
 
 		private ManeuverInput _inputPanel;
+
+		private float _progradeIncrement = 0.1f;
+		private float _normalIncrement = 0.1f;
+		private float _radialIncrement = 0.1f;
+
+		private static float _persProgradeIncrement = 0.1f;
+		private static float _persNormalIncrement = 0.1f;
+		private static float _persRadialIncrement = 0.1f;
 
 		private Vector3d _startDeltaV;
 
@@ -30,8 +40,27 @@ namespace BetterManeuvering
 
 		}
 
+		private void Update()
+		{
+			if (!_isVisible)
+				return;
+
+			if (_pointer == null)
+				return;
+
+			if (_hover || !_locked)
+			{
+				if (!_pointer.gameObject.activeSelf)
+					_pointer.gameObject.SetActive(true);
+			}
+			else if (_pointer.gameObject.activeSelf)
+				_pointer.gameObject.SetActive(false);
+		}
+
 		private void OnDestroy()
 		{
+			ManeuverController.Instance.RemoveInputPanel(this);
+
 			if (_inputPanel != null)
 				Destroy(_inputPanel);
 
@@ -39,7 +68,17 @@ namespace BetterManeuvering
 				_pointer.Terminate();
 		}
 
-		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i)
+		public bool Locked
+		{
+			get { return _locked; }
+		}
+
+		public ManeuverNode Node
+		{
+			get { return _node; }
+		}
+
+		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i, bool replace)
 		{
 			if (node == null)
 				return;
@@ -48,7 +87,16 @@ namespace BetterManeuvering
 			_gizmo = gizmo;
 			_index = i;
 
-			_inputButton = Instantiate<Button>(gizmo.minusOrbitbtn);
+			if (replace)
+			{
+				_progradeIncrement = _persProgradeIncrement;
+				_normalIncrement = _persNormalIncrement;
+				_radialIncrement = _persRadialIncrement;
+			}
+
+			if (_inputButton == null)
+				_inputButton = Instantiate<Button>(gizmo.minusOrbitbtn);
+
 			_inputButton.transform.SetParent(gizmo.minusOrbitbtn.transform.parent);
 
 			_buttonRect = _inputButton.GetComponent<RectTransform>();
@@ -63,11 +111,25 @@ namespace BetterManeuvering
 
 			_inputButton.navigation = new Navigation() { mode = Navigation.Mode.None };
 
+			_inputButton.onClick.RemoveAllListeners();
 			_inputButton.onClick.AddListener(new UnityAction(ToggleUI));
 			_inputButton.interactable = true;
 
+			Selectable inputSelect = _inputButton.GetComponent<Selectable>();
+
+			inputSelect.image.sprite = ManeuverLoader.InputButtonNormal;
+
+			SpriteState state = inputSelect.spriteState;
+			state.highlightedSprite = ManeuverLoader.InputButtonHighlight;
+			state.pressedSprite = ManeuverLoader.InputButtonActive;
+			state.disabledSprite = ManeuverLoader.InputButtonActive;
+			inputSelect.spriteState = state;
+
 			gizmo.minusOrbitbtn.onClick.RemoveAllListeners();
 			oldRect.localScale = new Vector3(0.000001f, 0.000001f, 0.000001f);
+
+			if (_pointer != null)
+				_pointer.worldTransform = _buttonRect;
 		}
 
 		public void UpdateDeltaV()
@@ -75,18 +137,26 @@ namespace BetterManeuvering
 			if (!_isVisible)
 				return;
 
-			_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}m/s", _index + 1, _node.DeltaV.magnitude));
-			_inputPanel.ProgradeText.OnTextUpdate.Invoke(string.Format("Prograde: {0:N1}m/s", _node.DeltaV.z));
-			_inputPanel.NormalText.OnTextUpdate.Invoke(string.Format("Normal: {0:N1}m/s", _node.DeltaV.y));
-			_inputPanel.RadialText.OnTextUpdate.Invoke(string.Format("Radial: {0:N1}m/s", _node.DeltaV.x));
+			_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N2}m/s", _index + 1, _node.DeltaV.magnitude));
+			_inputPanel.ProgradeText.OnTextUpdate.Invoke(string.Format("Prograde: {0:N2}m/s", _node.DeltaV.z));
+			_inputPanel.NormalText.OnTextUpdate.Invoke(string.Format("Normal: {0:N2}m/s", _node.DeltaV.y));
+			_inputPanel.RadialText.OnTextUpdate.Invoke(string.Format("Radial: {0:N2}m/s", _node.DeltaV.x));
+		}
+
+		public void CloseGizmo()
+		{
+			_gizmo = null;
+
+			if (_pointer == null)
+				return;
+
+			_pointer.worldTransform = _node.scaledSpaceTarget.transform;
 		}
 
 		private void ToggleUI()
 		{
-			ManeuverController.maneuverLog("Toggle Input", logLevels.log);
 			if (_isVisible)
 			{
-				ManeuverController.maneuverLog("Toggle Input 1", logLevels.log);
 				if (_inputPanel != null)
 					Destroy(_inputPanel);
 
@@ -95,11 +165,12 @@ namespace BetterManeuvering
 				if (_pointer != null)
 					_pointer.Terminate();
 
+				_locked = false;
+
 				_isVisible = false;
 			}
 			else
 			{
-				ManeuverController.maneuverLog("Toggle Input 2", logLevels.log);
 				openUI();
 
 				_startDeltaV = _node.DeltaV;
@@ -109,6 +180,8 @@ namespace BetterManeuvering
 				reposition();
 
 				attachPointer();
+
+				UpdateIncrements();
 
 				_isVisible = true;
 			}
@@ -156,14 +229,23 @@ namespace BetterManeuvering
 			_inputPanel.RadialUpButton.onClick.AddListener(new UnityAction(RadialUp));
 			_inputPanel.ResetButton.onClick.AddListener(new UnityAction(ResetManeuver));
 
+			_inputPanel.ProgradeIncDownButton.onClick.AddListener(new UnityAction(ProIncrementDown));
+			_inputPanel.ProgradeIncUpButton.onClick.AddListener(new UnityAction(ProIncrementUp));
+			_inputPanel.NormalIncDownButton.onClick.AddListener(new UnityAction(NormIncrementDown));
+			_inputPanel.NormalIncUpButton.onClick.AddListener(new UnityAction(NormIncrementUp));
+			_inputPanel.RadialIncDownButton.onClick.AddListener(new UnityAction(RadIncrementDown));
+			_inputPanel.RadialIncUpButton.onClick.AddListener(new UnityAction(RadIncrementUp));
+
 			_inputPanel.DragEvent.AddListener(new UnityAction<RectTransform>(clampToScreen));
 			_inputPanel.MouseOverEvent.AddListener(new UnityAction<bool>(SetMouseOverGizmo));
 
-			_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}m/s", _index + 1, _node.DeltaV.magnitude));
-			_inputPanel.ResetText.OnTextUpdate.Invoke(string.Format("{0:N1}m/s", _startDeltaV.magnitude));
-			_inputPanel.ProgradeText.OnTextUpdate.Invoke(string.Format("Prograde: {0:N1}m/s", _node.DeltaV.z));
-			_inputPanel.NormalText.OnTextUpdate.Invoke(string.Format("Normal: {0:N1}m/s", _node.DeltaV.y));
-			_inputPanel.RadialText.OnTextUpdate.Invoke(string.Format("Radial: {0:N1}m/s", _node.DeltaV.x));
+			_inputPanel.WindowToggle.onValueChanged.AddListener(new UnityAction<bool>(SetLockedMode));
+
+			_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N2}m/s", _index + 1, _node.DeltaV.magnitude));
+			_inputPanel.ResetText.OnTextUpdate.Invoke(string.Format("{0:N2}m/s", _startDeltaV.magnitude));
+			_inputPanel.ProgradeText.OnTextUpdate.Invoke(string.Format("Prograde: {0:N2}m/s", _node.DeltaV.z));
+			_inputPanel.NormalText.OnTextUpdate.Invoke(string.Format("Normal: {0:N2}m/s", _node.DeltaV.y));
+			_inputPanel.RadialText.OnTextUpdate.Invoke(string.Format("Radial: {0:N2}m/s", _node.DeltaV.x));
 		}
 
 		private void reposition()
@@ -193,23 +275,44 @@ namespace BetterManeuvering
 
 		private void SetMouseOverGizmo(bool isOver)
 		{
+			_hover = isOver;
+
 			if (_gizmo == null)
 				return;
 
 			_gizmo.SetMouseOverGizmo(isOver);
 		}
 
+		private void SetLockedMode(bool isOn)
+		{
+			_locked = isOn;
+
+			if (_gizmo == null && !isOn)
+				OnDestroy();
+		}
+
 		private void ProgradeDown()
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
 			{
-				ManeuverController.Instance.ignoreSensitivity = true;
-				_gizmo.handleRetrograde.OnHandleUpdate(_inputPanel.prograde_increment);
+				ManeuverController.Instance.OnRetrogradeUpdate(_progradeIncrement, _node, true, _gizmo != null);
+
+				if (_gizmo == null)
+					UpdateDeltaV();
 			}
 			else
 			{
-				_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z - _inputPanel.prograde_increment);
-				_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				if (_gizmo != null)
+				{
+					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z - _progradeIncrement);
+					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				}
+				else
+				{
+					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z - _progradeIncrement);
+					_node.solver.UpdateFlightPlan();
+					UpdateDeltaV();
+				}
 			}
 		}
 
@@ -217,14 +320,24 @@ namespace BetterManeuvering
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
 			{
-				ManeuverController.Instance.OnProgradeUpdate(_inputPanel.prograde_increment, _node, true, true);
-				//ManeuverController.Instance.ignoreSensitivity = true;
-				//_gizmo.handlePrograde.OnHandleUpdate(_inputPanel.prograde_increment);
+				ManeuverController.Instance.OnProgradeUpdate(_progradeIncrement, _node, true, _gizmo != null);
+
+				if (_gizmo == null)
+					UpdateDeltaV();
 			}
 			else
 			{
-				_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z + _inputPanel.prograde_increment);
-				_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				if (_gizmo != null)
+				{
+					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z + _progradeIncrement);
+					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				}
+				else
+				{
+					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z + _progradeIncrement);
+					_node.solver.UpdateFlightPlan();
+					UpdateDeltaV();
+				}
 			}
 		}
 
@@ -232,13 +345,24 @@ namespace BetterManeuvering
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
 			{
-				ManeuverController.Instance.ignoreSensitivity = true;
-				_gizmo.handleAntiNormal.OnHandleUpdate(_inputPanel.normal_increment);
+				ManeuverController.Instance.OnAntiNormalUpdate(_normalIncrement, _node, true, _gizmo != null);
+
+				if (_gizmo == null)
+					UpdateDeltaV();
 			}
 			else
 			{
-				_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y - _inputPanel.normal_increment, _gizmo.DeltaV.z);
-				_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				if (_gizmo != null)
+				{
+					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y - _normalIncrement, _gizmo.DeltaV.z);
+					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				}
+				else
+				{
+					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y - _normalIncrement, _gizmo.DeltaV.z);
+					_node.solver.UpdateFlightPlan();
+					UpdateDeltaV();
+				}
 			}
 		}
 
@@ -246,14 +370,24 @@ namespace BetterManeuvering
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
 			{
-				ManeuverController.Instance.OnNormalUpdate(_inputPanel.normal_increment, _node, true, true);
-				//ManeuverController.Instance.ignoreSensitivity = true;
-				//_gizmo.handleNormal.OnHandleUpdate(_inputPanel.normal_increment);
+				ManeuverController.Instance.OnNormalUpdate(_normalIncrement, _node, true, _gizmo != null);
+
+				if (_gizmo == null)
+					UpdateDeltaV();
 			}
 			else
 			{
-				_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y + _inputPanel.normal_increment, _gizmo.DeltaV.z);
-				_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				if (_gizmo != null)
+				{
+					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y + _normalIncrement, _gizmo.DeltaV.z);
+					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				}
+				else
+				{
+					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y + _normalIncrement, _gizmo.DeltaV.z);
+					_node.solver.UpdateFlightPlan();
+					UpdateDeltaV();
+				}
 			}
 		}
 
@@ -261,13 +395,24 @@ namespace BetterManeuvering
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
 			{
-				ManeuverController.Instance.ignoreSensitivity = true;
-				_gizmo.handleRadialIn.OnHandleUpdate(_inputPanel.radial_increment);
+				ManeuverController.Instance.OnRadialInUpdate(_radialIncrement, _node, true, _gizmo != null);
+
+				if (_gizmo == null)
+					UpdateDeltaV();
 			}
 			else
 			{
-				_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x - _inputPanel.radial_increment, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
-				_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				if (_gizmo != null)
+				{
+					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x - _radialIncrement, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
+					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				}
+				else
+				{
+					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x - _radialIncrement, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
+					_node.solver.UpdateFlightPlan();
+					UpdateDeltaV();
+				}
 			}
 		}
 
@@ -275,25 +420,153 @@ namespace BetterManeuvering
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
 			{
-				ManeuverController.Instance.ignoreSensitivity = true;
-				_gizmo.handleRadialOut.OnHandleUpdate(_inputPanel.radial_increment);
+				ManeuverController.Instance.OnRadialOutUpdate(_radialIncrement, _node, true, _gizmo != null);
+
+				if (_gizmo == null)
+					UpdateDeltaV();
 			}
 			else
 			{
-				_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x + _inputPanel.radial_increment, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
-				_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				if (_gizmo != null)
+				{
+					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x + _radialIncrement, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
+					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+				}
+				else
+				{
+					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x + _radialIncrement, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
+					_node.solver.UpdateFlightPlan();
+					UpdateDeltaV();
+				}
 			}
 		}
 
 		private void ResetManeuver()
 		{
-			_node.OnGizmoUpdated(_startDeltaV, _node.UT);
-			_gizmo.DeltaV = _startDeltaV;
+			if (_gizmo == null)
+			{
+				_node.DeltaV = _startDeltaV;
+				_node.solver.UpdateFlightPlan();
+				UpdateDeltaV();
+			}
+			else
+			{
+				_node.OnGizmoUpdated(_startDeltaV, _node.UT);
+				_gizmo.DeltaV = _startDeltaV;
+				UpdateDeltaV();
+			}
 
 			_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node DeltaV: {0:N1}m/s", _node.DeltaV.magnitude));
 			_inputPanel.ProgradeText.OnTextUpdate.Invoke(string.Format("Prograde: {0:N1}m/s", _node.DeltaV.z));
 			_inputPanel.NormalText.OnTextUpdate.Invoke(string.Format("Normal: {0:N1}m/s", _node.DeltaV.y));
 			_inputPanel.RadialText.OnTextUpdate.Invoke(string.Format("Radial: {0:N1}m/s", _node.DeltaV.x));
 		}
+
+
+		private void ProIncrementDown()
+		{
+			_progradeIncrement /= 10;
+
+			if (_progradeIncrement < 0.01f)
+				_progradeIncrement = 0.01f;
+
+			_persProgradeIncrement = _progradeIncrement;
+
+			UpdateIncrements();
+		}
+
+		private void ProIncrementUp()
+		{
+			_progradeIncrement *= 10;
+
+			if (_progradeIncrement > 100f)
+				_progradeIncrement = 100f;
+
+			_persProgradeIncrement = _progradeIncrement;
+
+			UpdateIncrements();
+		}
+
+		private void NormIncrementDown()
+		{
+			_normalIncrement /= 10;
+
+			if (_normalIncrement < 0.01f)
+				_normalIncrement = 0.01f;
+
+			_persNormalIncrement = _normalIncrement;
+
+			UpdateIncrements();
+		}
+
+		private void NormIncrementUp()
+		{
+			_normalIncrement *= 10;
+
+			if (_normalIncrement > 100f)
+				_normalIncrement = 100f;
+
+			_persNormalIncrement = _normalIncrement;
+
+			UpdateIncrements();
+		}
+
+		private void RadIncrementDown()
+		{
+			_radialIncrement /= 10;
+
+			if (_radialIncrement < 0.01f)
+				_radialIncrement = 0.01f;
+
+			_persRadialIncrement = _radialIncrement;
+
+			UpdateIncrements();
+		}
+
+		private void RadIncrementUp()
+		{
+			_radialIncrement *= 10;
+
+			if (_radialIncrement > 100f)
+				_radialIncrement = 100f;
+						
+			_persRadialIncrement = _radialIncrement;
+
+			UpdateIncrements();
+		}
+
+		private void UpdateIncrements()
+		{
+			if (_inputPanel == null)
+				return;
+
+			string units = "F0";
+
+			if (_progradeIncrement < 0.09f)
+				units = "F2";
+			else if (_progradeIncrement < 0.9f)
+				units = "F1";
+
+			_inputPanel.ProIncrementText.OnTextUpdate.Invoke(_progradeIncrement.ToString(units));
+
+			if (_normalIncrement < 0.09f)
+				units = "F2";
+			else if (_normalIncrement < 0.9f)
+				units = "F1";
+			else
+				units = "F0";
+
+			_inputPanel.NormIncrementText.OnTextUpdate.Invoke(_normalIncrement.ToString(units));
+
+			if (_radialIncrement < 0.09f)
+				units = "F2";
+			else if (_radialIncrement < 0.9f)
+				units = "F1";
+			else
+				units = "F0";
+
+			_inputPanel.RadIncrementText.OnTextUpdate.Invoke(_radialIncrement.ToString(units));
+		}
+
 	}
 }
