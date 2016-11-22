@@ -8,8 +8,6 @@ namespace BetterManeuvering
 	{
 		private ManeuverGizmo gizmo;
 
-		public bool secondary;
-
 		private void Start()
 		{
 			gizmo = gameObject.GetComponent<ManeuverGizmo>();
