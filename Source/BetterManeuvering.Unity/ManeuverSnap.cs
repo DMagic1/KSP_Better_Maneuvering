@@ -8,6 +8,7 @@ namespace BetterManeuvering.Unity
 {
 	public class ManeuverSnap : MonoBehaviour, IBeginDragHandler, IDragHandler, IPointerEnterHandler, IPointerExitHandler
 	{
+		public Toggle WindowToggle = null;
 		public GameObject NextOrbit = null;
 		public GameObject PreviousOrbit = null;
 		public GameObject Apo = null;
