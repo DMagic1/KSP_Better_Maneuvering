@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KSPBundleDefinition xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" UrlName="better_maneuver_prefabs" Name="better_maneuver_prefabs" CreatedTime="-8587217619151952362">
+  <Author />
+  <Info />
+  <Assets>
+    <Asset Name="Input_Panel" Path="Assets/Prefabs/Input_Panel.prefab" Type="GameObject" Url="Prefabs/Input_Panel" AutoLoad="false" />
+    <Asset Name="Warp_Panel" Path="Assets/Prefabs/Warp_Panel.prefab" Type="GameObject" Url="Prefabs/Warp_Panel" AutoLoad="false" />
+  </Assets>
+  <Dependencies />
+</KSPBundleDefinition>
