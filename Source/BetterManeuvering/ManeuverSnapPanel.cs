@@ -14,6 +14,9 @@ namespace BetterManeuvering
 		private ManeuverNode _node;
 		private ManeuverGizmo _gizmo;
 		private Vector3d _oldDeltaV;
+		private int _index;
+		private bool _locked;
+		private bool _hover;
 
 		private double _startUT;
 		private double apoUT, periUT, nextOUT, prevOUT, nextPUT, prevPUT, eqAscUT, eqDescUT, relAscUT, relDescUT, clAppUT;
@@ -34,15 +37,6 @@ namespace BetterManeuvering
 
 		}
 
-		private void OnDestroy()
-		{
-			if (_snapPanel != null)
-				Destroy(_snapPanel);
-
-			if (_pointer != null)
-				_pointer.Terminate();
-		}
-
 		private void Update()
 		{
 			if (!_isVisible)
@@ -50,19 +44,53 @@ namespace BetterManeuvering
 
 			if (Math.Abs(_oldDeltaV.magnitude - _node.DeltaV.magnitude) > 10)
 			{
+				_patch = _node.patch;
+				_oldDeltaV = _node.DeltaV;
 				checkOrbit();
 				UpdateTimers();
 				return;
 			}
 
-			if (Time.time - _lastUpdate < 0.5)
+			if (Time.time - _lastUpdate > 0.5)
+			{
+				_lastUpdate = Time.time;
+				UpdateTimers();
+			}
+
+			if (_pointer == null)
 				return;
 
-			_lastUpdate = Time.time;
-			UpdateTimers();
+			if (_hover || !_locked)
+			{
+				if (!_pointer.gameObject.activeSelf)
+					_pointer.gameObject.SetActive(true);
+			}
+			else if (_pointer.gameObject.activeSelf)
+				_pointer.gameObject.SetActive(false);
 		}
 
-		public void setup(ManeuverNode node, ManeuverGizmo gizmo)
+		private void OnDestroy()
+		{
+			ManeuverController.Instance.RemoveSnapPanel(this);
+			
+			if (_snapPanel != null)
+				Destroy(_snapPanel);
+
+			if (_pointer != null)
+				_pointer.Terminate();
+		}
+
+		public bool Locked
+		{
+			get { return _locked; }
+		}
+
+		public ManeuverNode Node
+		{
+			get { return _node; }
+		}
+
+		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i)
 		{
 			if (node == null)
 				return;
@@ -72,8 +100,11 @@ namespace BetterManeuvering
 			_patch = _node.patch;
 			_startUT = _node.UT;
 			_oldDeltaV = _node.DeltaV;
+			_index = i;
 
-			_snapButton = Instantiate<Button>(gizmo.plusOrbitBtn);
+			if (_snapButton == null)
+				_snapButton = Instantiate<Button>(gizmo.plusOrbitBtn);
+
 			_snapButton.transform.SetParent(gizmo.plusOrbitBtn.transform.parent);
 
 			_buttonRect = _snapButton.GetComponent<RectTransform>();
@@ -88,11 +119,35 @@ namespace BetterManeuvering
 
 			_snapButton.navigation = new Navigation() { mode = Navigation.Mode.None };
 
+			_snapButton.onClick.RemoveAllListeners();
 			_snapButton.onClick.AddListener(new UnityAction(ToggleUI));
 			_snapButton.interactable = true;
 
+			Selectable snapSelect = _snapButton.GetComponent<Selectable>();
+
+			snapSelect.image.sprite = ManeuverLoader.SnapButtonNormal;
+
+			SpriteState state = snapSelect.spriteState;
+			state.highlightedSprite = ManeuverLoader.SnapButtonHighlight;
+			state.pressedSprite = ManeuverLoader.SnapButtonActive;
+			state.disabledSprite = ManeuverLoader.SnapButtonActive;
+			snapSelect.spriteState = state;
+
 			gizmo.plusOrbitBtn.onClick.RemoveAllListeners();
 			oldRect.localScale = new Vector3(0.000001f, 0.000001f, 0.000001f);
+
+			if (_pointer != null)
+				_pointer.worldTransform = _buttonRect;
+		}
+
+		public void CloseGizmo()
+		{
+			_gizmo = null;
+
+			if (_pointer == null)
+				return;
+
+			_pointer.worldTransform = _node.scaledSpaceTarget.transform;
 		}
 
 		private void ToggleUI()
@@ -106,6 +161,8 @@ namespace BetterManeuvering
 
 				if (_pointer != null)
 					_pointer.Terminate();
+
+				_locked = false;
 
 				_isVisible = false;
 			}
@@ -179,9 +236,11 @@ namespace BetterManeuvering
 			_snapPanel.DragEvent.AddListener(new UnityAction<RectTransform>(clampToScreen));
 			_snapPanel.MouseOverEvent.AddListener(new UnityAction<bool>(SetMouseOverGizmo));
 
+			_snapPanel.WindowToggle.onValueChanged.AddListener(new UnityAction<bool>(SetLockedMode));
+
 			double UT = Planetarium.GetUniversalTime();
 
-			_snapPanel.CurrentTime.OnTextUpdate.Invoke(string.Format("Maneuver Node In: T {0}", KSPUtil.PrintTime(UT - _node.UT, 3, true)));
+			_snapPanel.CurrentTime.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: T {1}", _index + 1, KSPUtil.PrintTime(UT - _node.UT, 3, true)));
 			_snapPanel.ResetTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(_startUT - UT, 3, false)));
 		}
 
@@ -217,17 +276,27 @@ namespace BetterManeuvering
 
 		private void SetMouseOverGizmo(bool isOver)
 		{
+			_hover = isOver;
+
 			if (_gizmo == null)
 				return;
 
 			_gizmo.SetMouseOverGizmo(isOver);
 		}
 
+		private void SetLockedMode(bool isOn)
+		{
+			_locked = isOn;
+
+			if (_gizmo == null && !isOn)
+				OnDestroy();
+		}
+
 		private void UpdateTimers()
 		{
 			double UT = Planetarium.GetUniversalTime();
 
-			_snapPanel.CurrentTime.OnTextUpdate.Invoke(string.Format("Maneuver Node In: T {0}", KSPUtil.PrintTime(UT - _node.UT, 3, true)));
+			_snapPanel.CurrentTime.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: T {1}", _index + 1, KSPUtil.PrintTime(UT - _node.UT, 3, true)));
 			_snapPanel.ResetTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(_startUT - UT, 3, false)));
 
 			if (_snapPanel.Apo.activeSelf)
@@ -272,7 +341,7 @@ namespace BetterManeuvering
 
 			double UT = Planetarium.GetUniversalTime();
 
-			_snapPanel.CurrentTime.OnTextUpdate.Invoke(string.Format("Maneuver Node In: T {0}", KSPUtil.PrintTime(UT - _node.UT, 3, true)));
+			_snapPanel.CurrentTime.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: T {1}", _index + 1, KSPUtil.PrintTime(UT - _node.UT, 3, true)));
 			_snapPanel.ResetTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(_startUT - UT, 3, false)));
 
 			if (_patch.eccentricity >= 1)
@@ -311,9 +380,8 @@ namespace BetterManeuvering
 				else
 					_snapPanel.EqDesc.SetActive(true);
 
-				if (_patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
-					_snapPanel.NextPatch.SetActive(false);
-				else
+				if ((_patch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE)
+					&& (_patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE))
 				{
 					_snapPanel.NextPatch.SetActive(true);
 
@@ -324,6 +392,8 @@ namespace BetterManeuvering
 					else
 						nextPUT = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.EndUT - _patch.nextPatch.nextPatch.StartUT) / 2);
 				}
+				else
+					_snapPanel.NextPatch.SetActive(false);
 
 				if (_patch.patchStartTransition == Orbit.PatchTransitionType.INITIAL || _patch.patchStartTransition == Orbit.PatchTransitionType.MANEUVER)
 					_snapPanel.PreviousPatch.SetActive(false);
@@ -420,18 +490,18 @@ namespace BetterManeuvering
 						prevOUT = _node.UT - _patch.period;
 					}
 
-					if (_patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER)
-					{
-						_snapPanel.NextPatch.SetActive(true);
+					//if (_patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER)
+					//{
+					//	_snapPanel.NextPatch.SetActive(true);
 
-						if (_patch.nextPatch.nextPatch.UTsoi > 0)
-							nextPUT = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.UTsoi - _patch.nextPatch.nextPatch.StartUT) / 2);
-						else if (_patch.nextPatch.nextPatch.eccentricity < 1)
-							nextPUT = _patch.nextPatch.nextPatch.StartUT + (_patch.nextPatch.nextPatch.period / 2);
-						else
-							nextPUT = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.EndUT - _patch.nextPatch.nextPatch.StartUT) / 2);
-					}
-					else
+					//	if (_patch.nextPatch.nextPatch.UTsoi > 0)
+					//		nextPUT = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.UTsoi - _patch.nextPatch.nextPatch.StartUT) / 2);
+					//	else if (_patch.nextPatch.nextPatch.eccentricity < 1)
+					//		nextPUT = _patch.nextPatch.nextPatch.StartUT + (_patch.nextPatch.nextPatch.period / 2);
+					//	else
+					//		nextPUT = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.EndUT - _patch.nextPatch.nextPatch.StartUT) / 2);
+					//}
+					//else
 						_snapPanel.NextPatch.SetActive(false);
 
 					if (_patch.patchStartTransition == Orbit.PatchTransitionType.INITIAL || _patch.patchStartTransition == Orbit.PatchTransitionType.MANEUVER)
@@ -533,7 +603,8 @@ namespace BetterManeuvering
 					else
 						_snapPanel.EqDesc.SetActive(true);
 
-					if (_patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE)
+					if ((_patch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE)
+						&& (_patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE))
 					{
 						_snapPanel.NextPatch.SetActive(true);
 
@@ -620,10 +691,20 @@ namespace BetterManeuvering
 
 		private void setNodeTime(double time)
 		{
-			_gizmo.UT = time;
-			_gizmo.OnGizmoUpdated(_node.DeltaV, time);
-			_patch = _node.patch;
-			_oldDeltaV = _node.DeltaV;
+			if (_gizmo != null)
+			{
+				_gizmo.UT = time;
+				_gizmo.OnGizmoUpdated(_node.DeltaV, time);
+				_patch = _node.patch;
+				_oldDeltaV = _node.DeltaV;
+			}
+			else
+			{
+				_node.UT = time;
+				_node.solver.UpdateFlightPlan();
+				_patch = _node.patch;
+				_oldDeltaV = _node.DeltaV;
+			}
 
 			checkOrbit();
 
