@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using KSP.UI.Screens.Mapview.MapContextMenuOptions;
 
 namespace BetterManeuvering
@@ -47,7 +48,8 @@ namespace BetterManeuvering
 		private ManeuverInputPanel inputPanel;
 		private ManeuverSnapPanel snapPanel;
 
-		public bool ignoreSensitivity;
+		private List<ManeuverInputPanel> inputPanels = new List<ManeuverInputPanel>();
+		private List<ManeuverSnapPanel> snapPanels = new List<ManeuverSnapPanel>();
 
 		public static ManeuverController Instance
 		{
@@ -463,19 +465,46 @@ namespace BetterManeuvering
 			maneuverDialog = null;
 		}
 
+		public void RemoveSnapPanel(ManeuverSnapPanel panel)
+		{
+			if (snapPanels.Contains(panel))
+				snapPanels.Remove(panel);
+		}
+
+		public void RemoveInputPanel(ManeuverInputPanel panel)
+		{
+			if (inputPanels.Contains(panel))
+				inputPanels.Remove(panel);
+		}
+
 		private void gizmoSpawn(ManeuverGizmo gizmo)
 		{
-			maneuverLog("Spawning Gizmo...", logLevels.log);
 			if (gizmo == null)
 				return;
 
 			if (currentGizmo != null)
 			{
 				if (snapPanel != null)
-					Destroy(snapPanel);
+				{
+					if (snapPanel.Locked)
+					{
+						snapPanel.CloseGizmo();
+						snapPanels.Add(snapPanel);
+					}
+					else
+						Destroy(snapPanel);
+				}
 
 				if (inputPanel != null)
-					Destroy(inputPanel);
+				{
+					if (inputPanel.Locked)
+					{
+						inputPanel.CloseGizmo();
+						inputPanels.Add(inputPanel);
+					}
+					else
+						Destroy(inputPanel);
+				}
 
 				snapPanel = null;
 				inputPanel = null;
@@ -483,19 +512,10 @@ namespace BetterManeuvering
 
 			currentGizmo = gizmo;
 
-			//currentGizmo.OnMinimize = new Callback(DetachGizmo);
-
 			originalScale = currentGizmo.screenSize;
 
 			currentGizmo.screenSize = originalScale * settings.baseScale;
-
-			//for (int i = currentGizmo.cameraFacingBillboards.Length - 1; i >= 0; i--)
-			//{
-			//	Transform t = currentGizmo.cameraFacingBillboards[i];
-
-			//	maneuverLog("Camera Facing Billboard: {0} - {1}", logLevels.log, i, t.name);
-			//}
-
+			
 			for (int i = gizmo.renderer.solver.maneuverNodes.Count - 1; i >= 0; i--)
 			{
 				ManeuverNode node = gizmo.renderer.solver.maneuverNodes[i];
@@ -504,23 +524,9 @@ namespace BetterManeuvering
 					continue;
 
 				lastManeuverIndex = i;
-				//maneuverLog("Node Found...", logLevels.log);
 				currentNode = node;
 				break;
 			}
-
-			//RectTransform minusRect = currentGizmo.minusOrbitbtn.GetComponent<RectTransform>();
-
-			//maneuverLog("Minus Button Rect Anchored: {0:F4}\nPosition: {1:F4}\nPivot: {2:F4}\nAnchor Min: {3:F4}\nAnchor Max: {4:F4}\nScale: {5:F4}\nRotation: {5:F4}\nLocal Rotation: {6:F4}"
-			//	, logLevels.log
-			//	, minusRect.anchoredPosition3D
-			//	, minusRect.position
-			//	, minusRect.pivot
-			//	, minusRect.anchorMin
-			//	, minusRect.anchorMax
-			//	, minusRect.localScale
-				//, minusRect.rotation.eulerAngles
-				//, minusRect.localRotation.eulerAngles);
 
 			//RectTransform plusRect = currentGizmo.plusOrbitBtn.GetComponent<RectTransform>();
 
@@ -538,90 +544,58 @@ namespace BetterManeuvering
 			//	, currentGizmo.plusOrbitBtn.image.sprite.texture.height
 			//	, currentGizmo.plusOrbitBtn.image.sprite.texture.width);
 
-			//maneuverLog("Plus Button Transform: {0:F4}", logLevels.log, currentGizmo.plusOrbitBtn.transform.position);
-			//maneuverLog("Button Root Transform: {0:F4}", logLevels.log, currentGizmo.buttonRoot.transform.position);
-			//maneuverLog("Gizmo Transform: {0:F4}", logLevels.log, currentGizmo.transform.position);
-
-			//RectTransform closeRect = currentGizmo.deleteBtn.GetComponent<RectTransform>();
-
-			//maneuverLog("Close Button Rect Anchored: {0:F4}\nPosition: {1:F4}\nPivot: {2:F4}\nAnchor Min: {3:F4}\nAnchor Max: {4:F4}\nScale: {5:F4}\nRotation: {5:F4}\nLocal Rotation: {6:F4}"
-			//	, logLevels.log
-			//	, closeRect.anchoredPosition3D
-			//	, closeRect.position
-			//	, closeRect.pivot
-			//	, closeRect.anchorMin
-			//	, closeRect.anchorMax
-			//	, closeRect.localScale
-			//	, closeRect.rotation.eulerAngles
-			//	, closeRect.localRotation.eulerAngles);
-
 			attachGizmoHandlers();
 
-			if (settings.maneuverSnap)
+			if (settings.replaceGizmoButtons)
+			{
 				attachNewSnapButton();
-
-			if (settings.manualControls)
 				attachNewInputButton();
+			}
 		}
 
 		private void attachNewSnapButton()
 		{
+			for (int i = snapPanels.Count - 1; i >= 0; i--)
+			{
+				ManeuverSnapPanel snap = snapPanels[i];
+
+				if (snap == null)
+					continue;
+
+				if (snap.Node != currentNode)
+					continue;
+
+				snapPanel = snap;
+				snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex);
+				return;
+			}
+
 			snapPanel = gameObject.AddComponent<ManeuverSnapPanel>();
 
-			snapPanel.setup(currentNode, currentGizmo);
+			snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex);
 		}
 
 		private void attachNewInputButton()
 		{
+			for (int i = inputPanels.Count - 1; i >= 0; i--)
+			{
+				ManeuverInputPanel input = inputPanels[i];
+
+				if (input == null)
+					continue;
+
+				if (input.Node != currentNode)
+					continue;
+
+				inputPanel = input;
+				inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, false);
+				return;
+			}
+
 			inputPanel = gameObject.AddComponent<ManeuverInputPanel>();
 
-			inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex);
+			inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, settings.rememberManualInput);
 		}
-
-		private void DetachGizmo()
-		{
-			maneuverLog("Detaching Gizmo...", logLevels.log);
-
-			if (currentNode != null)
-			currentNode.DetachGizmo();
-
-			currentGizmo = null;
-			currentNode = null;
-
-			if (snapPanel != null)
-				Destroy(snapPanel);
-
-			if (inputPanel != null)
-				Destroy(inputPanel);
-
-			snapPanel = null;
-			inputPanel = null;
-		}
-
-		//private void GizmoUpdated(Vector3d deltaV, double UT)
-		//{
-		//	currentNode.OnGizmoUpdated(deltaV, UT);
-		//	currentGizmo.patchBefore = currentNode.patch;
-		//	currentGizmo.patchAhead = currentNode.nextPatch;
-		//}
-
-		//private void hideAttachedGizmo()
-		//{
-		//	maneuverLog("1-1", logLevels.log);
-		//	currentGizmo = Instantiate<GameObject>(MapView.ManeuverNodePrefab).GetComponent<ManeuverGizmo>();
-		//	currentGizmo.GetComponent<ManeuverGizmoListener>().secondary = true;
-		//	currentGizmo.gameObject.SetActive(true);
-		//	currentGizmo.gameObject.name = "Maneuver Node";
-		//	currentGizmo.DeltaV = currentNode.DeltaV;
-		//	currentGizmo.UT = currentNode.UT;
-		//	currentGizmo.OnGizmoUpdated = new ManeuverGizmo.HandlesUpdatedCallback(GizmoUpdated);
-		//	currentGizmo.OnMinimize = new Callback(DetachGizmo);
-		//	currentGizmo.OnDelete = new Callback(DeleteGizmo);
-		//	currentGizmo.Setup(currentNode, currentGizmo.renderer);
-		//	currentGizmo.transform.position = currentGizmo.transform.position;
-
-		//	currentGizmo.screenSize = originalScale * settings.baseScale;
-		//}
 
 		private void attachGizmoHandlers()
 		{
@@ -651,7 +625,7 @@ namespace BetterManeuvering
 				currentGizmo.handleRadialOut.OnHandleUpdate = new ManeuverGizmoHandle.HandleUpdate(OnRadialOutUpdateStd);
 			}
 
-			UpdateRotation();
+			UpdateRotation(currentNode);
 		}
 
 		private void gizmoDestroy(ManeuverGizmo gizmo)
@@ -672,62 +646,22 @@ namespace BetterManeuvering
 			inputPanel = null;
 		}
 
-		private void UpdateRotation()
+		private void UpdateRotation(ManeuverNode node)
 		{
-			Vector3d oldPos = currentNode.patch.getRelativePositionAtUT(currentNode.UT).xzy;
-			Vector3d oldVel = currentNode.patch.getOrbitalVelocityAtUT(currentNode.UT).xzy;
+			Vector3d oldPos = node.patch.getRelativePositionAtUT(node.UT).xzy;
+			Vector3d oldVel = node.patch.getOrbitalVelocityAtUT(node.UT).xzy;
 			referenceRotation = Quaternion.LookRotation(oldVel, Vector3d.Cross(-oldPos, oldVel));
-			//transform.rotation = Quaternion.LookRotation(oldVel, Vector3d.Cross(-oldPos, oldVel));
 
-			Vector3d pos = currentNode.nextPatch.getRelativePositionAtUT(currentNode.UT).xzy;
-			Vector3d vel = currentNode.nextPatch.getOrbitalVelocityAtUT(currentNode.UT).xzy;
+			Vector3d pos = node.nextPatch.getRelativePositionAtUT(node.UT).xzy;
+			Vector3d vel = node.nextPatch.getOrbitalVelocityAtUT(node.UT).xzy;
 			orbitRotation = Quaternion.LookRotation(vel, Vector3d.Cross(-pos, vel));
-			//currentListener.transform.rotation = Quaternion.LookRotation(vel, Vector3d.Cross(-pos, vel));
 		}
 
 		private void OnProgradeUpdate(float value)
 		{
-			//if (ignoreSensitivity)
-			//{
-			//	if (Mathf.Abs(value) > accuracy)
-			//	{
-			//		float floor = Mathf.Floor(Mathf.Abs(value) / accuracy);
+			value = Mathf.Pow(Mathf.Abs(value), (float)currentGizmo.sensitivity) * (float)currentGizmo.multiplier * Mathf.Sign(value);
 
-			//		value = value / floor;
-
-			//		for (int i = 0; i < floor; i++)
-			//		{
-			//			ProgradeUpdate(value, false);
-			//		}
-			//	}
-			//	else
-			//		ProgradeUpdate(value, true);
-			//}
-			//else
-			//{
-
-				value = Mathf.Pow(Mathf.Abs(value), (float)currentGizmo.sensitivity) * (float)currentGizmo.multiplier * Mathf.Sign(value);
-
-				//if (Mathf.Abs(endValue) > accuracy)
-				//{
-				//	float floor = Mathf.Floor(Mathf.Abs(endValue) / accuracy);
-
-				//	endValue = endValue / floor;
-
-				//	for (int i = 0; i < floor; i++)
-				//	{
-				//		ProgradeUpdate(endValue, false);
-				//	}
-				//}
-				//else
-				//	ProgradeUpdate(endValue, false);
-			//}
-
-				OnProgradeUpdate(value, currentNode, false, true);
-
-			UpdateInputPanel();
-
-			//ignoreSensitivity = false;
+			OnProgradeUpdate(value, currentNode, false, true);
 		}
 
 		public void OnProgradeUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
@@ -745,11 +679,13 @@ namespace BetterManeuvering
 			}
 			else
 				ProgradeUpdate(value, node, ignore, gizmo);
+
+			UpdateInputPanel();
 		}
 
 		private void ProgradeUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
 		{
-			UpdateRotation();
+			UpdateRotation(node);
 
 			Vector3 reference = (referenceRotation * Vector3.forward).normalized;
 
@@ -773,128 +709,63 @@ namespace BetterManeuvering
 			}
 		}
 
-		//private void ProgradeUpdate(float value, bool ignore)
-		//{
-		//	UpdateRotation();
-
-		//	Vector3 reference = transform.forward.normalized;
-
-		//	Vector3 newDirection = new Vector3(Vector3.Dot(reference, -1 * currentListener.transform.right.normalized),
-		//		Vector3.Dot(reference, -1 * currentListener.transform.up.normalized),
-		//		Vector3.Dot(reference, currentListener.transform.forward.normalized));
-
-		//	currentGizmo.DeltaV += newDirection * value;
-
-		//	if (ignore)
-		//		currentNode.OnGizmoUpdated(currentGizmo.DeltaV, currentGizmo.UT);
-		//	else
-		//		cachedPrograde(0);
-		//}
-
 		private void OnRetrogradeUpdate(float value)
 		{
-			if (ignoreSensitivity)
-			{
-				if (Mathf.Abs(value) > accuracy)
-				{
-					float floor = Mathf.Floor(Mathf.Abs(value) / accuracy);
+			value = Mathf.Pow(Mathf.Abs(value), (float)currentGizmo.sensitivity) * (float)currentGizmo.multiplier * Mathf.Sign(value);
 
-					value = value / floor;
-
-					for (int i = 0; i < floor; i++)
-					{
-						RetrogradeUpdate(value, false);
-					}
-				}
-				else
-					RetrogradeUpdate(value, true);
-			}
-			else
-			{
-
-				float endValue = Mathf.Pow(Mathf.Abs(value), (float)currentGizmo.sensitivity) * (float)currentGizmo.multiplier * Mathf.Sign(value);
-
-				if (Mathf.Abs(endValue) > accuracy)
-				{
-					float floor = Mathf.Floor(Mathf.Abs(endValue) / accuracy);
-
-					endValue = endValue / floor;
-
-					for (int i = 0; i < floor; i++)
-					{
-						RetrogradeUpdate(endValue, false);
-					}
-				}
-				else
-					RetrogradeUpdate(endValue, false);
-			}
-
-			UpdateInputPanel();
-
-			ignoreSensitivity = false;
+			OnRetrogradeUpdate(value, currentNode, false, true);
 		}
 
-		private void RetrogradeUpdate(float value, bool ignore)
+		public void OnRetrogradeUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
 		{
-			UpdateRotation();
+			if (Mathf.Abs(value) > accuracy)
+			{
+				float floor = Mathf.Floor(Mathf.Abs(value) / accuracy);
 
-			Vector3 reference = transform.forward.normalized;
+				value = value / floor;
 
-			Vector3 newDirection = new Vector3(Vector3.Dot(reference, -1 * currentListener.transform.right.normalized),
-				Vector3.Dot(reference, -1 * currentListener.transform.up.normalized),
-				Vector3.Dot(reference, currentListener.transform.forward.normalized));
-
-			currentGizmo.DeltaV -= newDirection * value;
-
-			if (ignore)
-				currentNode.OnGizmoUpdated(currentGizmo.DeltaV, currentGizmo.UT);
+				for (int i = 0; i < floor; i++)
+				{
+					RetrogradeUpdate(value, node, ignore, gizmo);
+				}
+			}
 			else
-				cachedRetrograde(0);
+				RetrogradeUpdate(value, node, ignore, gizmo);
+
+			UpdateInputPanel();
+		}
+
+		private void RetrogradeUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
+		{
+			UpdateRotation(node);
+
+			Vector3 reference = (referenceRotation * Vector3.forward).normalized;
+
+			Vector3 newDirection = new Vector3(Vector3.Dot(reference, -1 * (orbitRotation * Vector3.right).normalized),
+				Vector3.Dot(reference, -1 * (orbitRotation * Vector3.up).normalized),
+				Vector3.Dot(reference, (orbitRotation * Vector3.forward).normalized));
+
+			if (gizmo)
+			{
+				currentGizmo.DeltaV -= newDirection * value;
+
+				if (ignore)
+					node.OnGizmoUpdated(currentGizmo.DeltaV, currentGizmo.UT);
+				else
+					cachedRetrograde(0);
+			}
+			else
+			{
+				node.DeltaV -= newDirection * value;
+				node.solver.UpdateFlightPlan();
+			}
 		}
 
 		private void OnNormalUpdate(float value)
 		{
-			//if (ignoreSensitivity)
-			//{
-			//	if (Mathf.Abs(value) > accuracy)
-			//	{
-			//		float floor = Mathf.Floor(Mathf.Abs(value) / accuracy);
-
-			//		value = value / floor;
-
-			//		for (int i = 0; i < floor; i++)
-			//		{
-			//			NormalUpdate(value, false);
-			//		}
-			//	}
-			//	else
-			//		NormalUpdate(value, true);
-			//}
-			//else
-			//{
-
 			value = Mathf.Pow(Mathf.Abs(value), (float)currentGizmo.sensitivity) * (float)currentGizmo.multiplier * Mathf.Sign(value);
 
-			//	if (Mathf.Abs(endValue) > accuracy)
-			//	{
-			//		float floor = Mathf.Floor(Mathf.Abs(endValue) / accuracy);
-
-			//		endValue = endValue / floor;
-
-			//		for (int i = 0; i < floor; i++)
-			//		{
-			//			NormalUpdate(endValue, false);
-			//		}
-			//	}
-			//	else
-			//		NormalUpdate(endValue, false);
-			//}
-
-			//UpdateInputPanel();
-
-				OnNormalUpdate(value, currentNode, false, true);
-
-			//ignoreSensitivity = false;
+			OnNormalUpdate(value, currentNode, false, true);
 		}
 
 		public void OnNormalUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
@@ -912,29 +783,13 @@ namespace BetterManeuvering
 			}
 			else
 				NormalUpdate(value, node, ignore, gizmo);
+
+			UpdateInputPanel();
 		}
-
-		//private void NormalUpdate(float value, bool ignore)
-		//{
-		//	UpdateRotation();
-
-		//	Vector3 reference = transform.up.normalized;
-
-		//	Vector3 newDirection = new Vector3(0 /*Vector3.Dot(reference, currentListener.transform.right.normalized)*/,
-		//		Vector3.Dot(reference, currentListener.transform.up.normalized),
-		//		Vector3.Dot(reference, -1 * currentListener.transform.forward.normalized));
-
-		//	currentGizmo.DeltaV += newDirection * value;
-
-		//	if (ignore)
-		//		currentNode.OnGizmoUpdated(currentGizmo.DeltaV, currentGizmo.UT);
-		//	else
-		//		cachedNormal(0);
-		//}
 
 		private void NormalUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
 		{
-			UpdateRotation();
+			UpdateRotation(node);
 
 			Vector3 reference = (referenceRotation * Vector3.up).normalized;
 
@@ -960,185 +815,158 @@ namespace BetterManeuvering
 
 		private void OnAntiNormalUpdate(float value)
 		{
-			if (ignoreSensitivity)
-			{
-				if (Mathf.Abs(value) > accuracy)
-				{
-					float floor = Mathf.Floor(Mathf.Abs(value) / accuracy);
+			value = Mathf.Pow(Mathf.Abs(value), (float)currentGizmo.sensitivity) * (float)currentGizmo.multiplier * Mathf.Sign(value);
 
-					value = value / floor;
-
-					for (int i = 0; i < floor; i++)
-					{
-						AntiNormalUpdate(value, false);
-					}
-				}
-				else
-					AntiNormalUpdate(value, true);
-			}
-			else
-			{
-
-				float endValue = Mathf.Pow(Mathf.Abs(value), (float)currentGizmo.sensitivity) * (float)currentGizmo.multiplier * Mathf.Sign(value);
-
-				if (Mathf.Abs(endValue) > accuracy)
-				{
-					float floor = Mathf.Floor(Mathf.Abs(endValue) / accuracy);
-
-					endValue = endValue / floor;
-
-					for (int i = 0; i < floor; i++)
-					{
-						AntiNormalUpdate(endValue, false);
-					}
-				}
-				else
-					AntiNormalUpdate(endValue, false);
-			}
-
-			UpdateInputPanel();
-
-			ignoreSensitivity = false;
+			OnAntiNormalUpdate(value, currentNode, false, true);
 		}
 
-		private void AntiNormalUpdate(float value, bool ignore)
+		public void OnAntiNormalUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
 		{
-			UpdateRotation();
+			if (Mathf.Abs(value) > accuracy)
+			{
+				float floor = Mathf.Floor(Mathf.Abs(value) / accuracy);
 
-			Vector3 reference = transform.up.normalized;
+				value = value / floor;
 
-			Vector3 newDirection = new Vector3(0/*Vector3.Dot(reference, currentListener.transform.right.normalized)*/,
-				Vector3.Dot(reference, currentListener.transform.up.normalized),
-				Vector3.Dot(reference, -1 * currentListener.transform.forward.normalized));
-
-			currentGizmo.DeltaV -= newDirection * value;
-
-			if (ignore)
-				currentNode.OnGizmoUpdated(currentGizmo.DeltaV, currentGizmo.UT);
+				for (int i = 0; i < floor; i++)
+				{
+					AntiNormalUpdate(value, node, ignore, gizmo);
+				}
+			}
 			else
-				cachedAntiNormal(0);
+				AntiNormalUpdate(value, node, ignore, gizmo);
+
+			UpdateInputPanel();
+		}
+
+		private void AntiNormalUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
+		{
+			UpdateRotation(node);
+
+			Vector3 reference = (referenceRotation * Vector3.up).normalized;
+
+			Vector3 newDirection = new Vector3(0,
+				Vector3.Dot(reference, (orbitRotation * Vector3.up).normalized),
+				Vector3.Dot(reference, -1 * (orbitRotation * Vector3.forward).normalized));
+
+			if (gizmo)
+			{
+				currentGizmo.DeltaV -= newDirection * value;
+
+				if (ignore)
+					node.OnGizmoUpdated(currentGizmo.DeltaV, currentGizmo.UT);
+				else
+					cachedAntiNormal(0);
+			}
+			else
+			{
+				node.DeltaV -= newDirection * value;
+				node.solver.UpdateFlightPlan();
+			}
 		}
 
 		private void OnRadialInUpdate(float value)
 		{
-			if (ignoreSensitivity)
-			{
-				if (Mathf.Abs(value) > accuracy)
-				{
-					float floor = Mathf.Floor(Mathf.Abs(value) / accuracy);
+			value = Mathf.Pow(Mathf.Abs(value), (float)currentGizmo.sensitivity) * (float)currentGizmo.multiplier * Mathf.Sign(value);
 
-					value = value / floor;
-
-					for (int i = 0; i < floor; i++)
-					{
-						RadialInUpdate(value, false);
-					}
-				}
-				else
-					RadialInUpdate(value, true);
-			}
-			else
-			{
-
-				float endValue = Mathf.Pow(Mathf.Abs(value), (float)currentGizmo.sensitivity) * (float)currentGizmo.multiplier * Mathf.Sign(value);
-
-				if (Mathf.Abs(endValue) > accuracy)
-				{
-					float floor = Mathf.Floor(Mathf.Abs(endValue) / accuracy);
-
-					endValue = endValue / floor;
-
-					for (int i = 0; i < floor; i++)
-					{
-						RadialInUpdate(endValue, false);
-					}
-				}
-				else
-					RadialInUpdate(endValue, false);
-			}
-
-			UpdateInputPanel();
-
-			ignoreSensitivity = false;
+			OnRadialInUpdate(value, currentNode, false, true);
 		}
 
-		private void RadialInUpdate(float value, bool ignore)
+		public void OnRadialInUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
 		{
-			UpdateRotation();
+			if (Mathf.Abs(value) > accuracy)
+			{
+				float floor = Mathf.Floor(Mathf.Abs(value) / accuracy);
 
-			Vector3 reference = -1 * transform.right.normalized;
+				value = value / floor;
 
-			Vector3 newDirection = new Vector3(Vector3.Dot(reference, -1 * currentListener.transform.right.normalized),
-				0/*Vector3.Dot(reference, currentListener.transform.up.normalized)*/,
-				Vector3.Dot(reference, currentListener.transform.forward.normalized));
-
-			currentGizmo.DeltaV -= newDirection * value;
-
-			if (ignore)
-				currentNode.OnGizmoUpdated(currentGizmo.DeltaV, currentGizmo.UT);
+				for (int i = 0; i < floor; i++)
+				{
+					RadialInUpdate(value, node, ignore, gizmo);
+				}
+			}
 			else
-				cachedRadialIn(0);
+				RadialInUpdate(value, node, ignore, gizmo);
+
+			UpdateInputPanel();
+		}
+
+		private void RadialInUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
+		{
+			UpdateRotation(node);
+
+			Vector3 reference = (referenceRotation * Vector3.right).normalized;
+
+			Vector3 newDirection = new Vector3(Vector3.Dot(reference, (orbitRotation * Vector3.right).normalized),
+				0,
+				Vector3.Dot(reference, -1 * (orbitRotation * Vector3.forward).normalized));
+
+			if (gizmo)
+			{
+				currentGizmo.DeltaV -= newDirection * value;
+
+				if (ignore)
+					node.OnGizmoUpdated(currentGizmo.DeltaV, currentGizmo.UT);
+				else
+					cachedRadialIn(0);
+			}
+			else
+			{
+				node.DeltaV -= newDirection * value;
+				node.solver.UpdateFlightPlan();
+			}
 		}
 
 		private void OnRadialOutUpdate(float value)
 		{
-			if (ignoreSensitivity)
-			{
-				if (Mathf.Abs(value) > accuracy)
-				{
-					float floor = Mathf.Floor(Mathf.Abs(value) / accuracy);
+			value = Mathf.Pow(Mathf.Abs(value), (float)currentGizmo.sensitivity) * (float)currentGizmo.multiplier * Mathf.Sign(value);
 
-					value = value / floor;
-
-					for (int i = 0; i < floor; i++)
-					{
-						RadialOutUpdate(value, false);
-					}
-				}
-				else
-					RadialOutUpdate(value, true);
-			}
-			else
-			{
-
-				float endValue = Mathf.Pow(Mathf.Abs(value), (float)currentGizmo.sensitivity) * (float)currentGizmo.multiplier * Mathf.Sign(value);
-
-				if (Mathf.Abs(endValue) > accuracy)
-				{
-					float floor = Mathf.Floor(Mathf.Abs(endValue) / accuracy);
-
-					endValue = endValue / floor;
-
-					for (int i = 0; i < floor; i++)
-					{
-						RadialOutUpdate(endValue, false);
-					}
-				}
-				else
-					RadialOutUpdate(endValue, false);
-			}
-
-			UpdateInputPanel();
-
-			ignoreSensitivity = false;
+			OnRadialOutUpdate(value, currentNode, false, true);
 		}
 
-		private void RadialOutUpdate(float value, bool ignore)
+		public void OnRadialOutUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
 		{
-			UpdateRotation();
+			if (Mathf.Abs(value) > accuracy)
+			{
+				float floor = Mathf.Floor(Mathf.Abs(value) / accuracy);
 
-			Vector3 reference = -1 * transform.right.normalized;
+				value = value / floor;
 
-			Vector3 newDirection = new Vector3(Vector3.Dot(reference, -1 * currentListener.transform.right.normalized),
-				0/*Vector3.Dot(reference, currentListener.transform.up.normalized)*/,
-				Vector3.Dot(reference, currentListener.transform.forward.normalized));
-
-			currentGizmo.DeltaV += newDirection * value;
-
-			if (ignore)
-				currentNode.OnGizmoUpdated(currentGizmo.DeltaV, currentGizmo.UT);
+				for (int i = 0; i < floor; i++)
+				{
+					RadialOutUpdate(value, node, ignore, gizmo);
+				}
+			}
 			else
-				cachedRadialOut(0);
+				RadialOutUpdate(value, node, ignore, gizmo);
+
+			UpdateInputPanel();
+		}
+
+		private void RadialOutUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
+		{
+			UpdateRotation(node);
+
+			Vector3 reference = (referenceRotation * Vector3.right).normalized;
+
+			Vector3 newDirection = new Vector3(Vector3.Dot(reference, (orbitRotation * Vector3.right).normalized),
+				0,
+				Vector3.Dot(reference, -1 * (orbitRotation * Vector3.forward).normalized));
+
+			if (gizmo)
+			{
+				currentGizmo.DeltaV += newDirection * value;
+
+				if (ignore)
+					node.OnGizmoUpdated(currentGizmo.DeltaV, currentGizmo.UT);
+				else
+					cachedRadialOut(0);
+			}
+			else
+			{
+				node.DeltaV += newDirection * value;
+				node.solver.UpdateFlightPlan();
+			}
 		}
 
 		private void OnProgradeUpdateStd(float value)
@@ -1185,7 +1013,7 @@ namespace BetterManeuvering
 
 		private void UpdateInputPanel()
 		{
-			if (!settings.manualControls)
+			if (!settings.replaceGizmoButtons)
 				return;
 
 			if (inputPanel == null)
