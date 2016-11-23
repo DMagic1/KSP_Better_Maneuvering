@@ -1,5 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
+﻿#region license
+/*The MIT License (MIT)
+
+ManeuverInputPanel - Controls the manual deltaV input panel
+
+Copyright (c) 2016 DMagic
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+#endregion
+
 using BetterManeuvering.Unity;
 using KSP.UI;
 using UnityEngine;
@@ -294,151 +319,127 @@ namespace BetterManeuvering
 		private void ProgradeDown()
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
-			{
 				ManeuverController.Instance.OnRetrogradeUpdate(_progradeIncrement, _node, true, _gizmo != null);
-
-				if (_gizmo == null)
-					UpdateDeltaV();
-			}
 			else
 			{
 				if (_gizmo != null)
 				{
 					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z - _progradeIncrement);
-					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+					_node.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
 				}
 				else
 				{
 					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z - _progradeIncrement);
 					_node.solver.UpdateFlightPlan();
-					UpdateDeltaV();
 				}
 			}
+
+			UpdateDeltaV();
 		}
 
 		private void ProgradeUp()
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
-			{
 				ManeuverController.Instance.OnProgradeUpdate(_progradeIncrement, _node, true, _gizmo != null);
-
-				if (_gizmo == null)
-					UpdateDeltaV();
-			}
 			else
 			{
 				if (_gizmo != null)
 				{
 					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z + _progradeIncrement);
-					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+					_node.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
 				}
 				else
 				{
 					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z + _progradeIncrement);
 					_node.solver.UpdateFlightPlan();
-					UpdateDeltaV();
 				}
 			}
+
+			UpdateDeltaV();
 		}
 
 		private void NormalDown()
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
-			{
 				ManeuverController.Instance.OnAntiNormalUpdate(_normalIncrement, _node, true, _gizmo != null);
-
-				if (_gizmo == null)
-					UpdateDeltaV();
-			}
 			else
 			{
 				if (_gizmo != null)
 				{
 					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y - _normalIncrement, _gizmo.DeltaV.z);
-					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+					_node.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
 				}
 				else
 				{
 					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y - _normalIncrement, _gizmo.DeltaV.z);
 					_node.solver.UpdateFlightPlan();
-					UpdateDeltaV();
 				}
 			}
+
+			UpdateDeltaV();
 		}
 
 		private void NormalUp()
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
-			{
 				ManeuverController.Instance.OnNormalUpdate(_normalIncrement, _node, true, _gizmo != null);
-
-				if (_gizmo == null)
-					UpdateDeltaV();
-			}
 			else
 			{
 				if (_gizmo != null)
 				{
 					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y + _normalIncrement, _gizmo.DeltaV.z);
-					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+					_node.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
 				}
 				else
 				{
 					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y + _normalIncrement, _gizmo.DeltaV.z);
 					_node.solver.UpdateFlightPlan();
-					UpdateDeltaV();
 				}
 			}
+
+			UpdateDeltaV();
 		}
 
 		private void RadialDown()
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
-			{
 				ManeuverController.Instance.OnRadialInUpdate(_radialIncrement, _node, true, _gizmo != null);
-
-				if (_gizmo == null)
-					UpdateDeltaV();
-			}
 			else
 			{
 				if (_gizmo != null)
 				{
 					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x - _radialIncrement, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
-					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+					_node.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
 				}
 				else
 				{
 					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x - _radialIncrement, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
 					_node.solver.UpdateFlightPlan();
-					UpdateDeltaV();
 				}
 			}
+
+			UpdateDeltaV();
 		}
 
 		private void RadialUp()
 		{
 			if (ManeuverController.Instance.settings.alignToOrbit)
-			{
 				ManeuverController.Instance.OnRadialOutUpdate(_radialIncrement, _node, true, _gizmo != null);
-
-				if (_gizmo == null)
-					UpdateDeltaV();
-			}
 			else
 			{
 				if (_gizmo != null)
 				{
 					_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x + _radialIncrement, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
-					_gizmo.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+					_node.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
 				}
 				else
 				{
 					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x + _radialIncrement, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
 					_node.solver.UpdateFlightPlan();
-					UpdateDeltaV();
 				}
 			}
+
+			UpdateDeltaV();
 		}
 
 		private void ResetManeuver()
