@@ -70,6 +70,12 @@ namespace BetterManeuvering
 			if (!_isVisible)
 				return;
 
+			if (_gizmo == null && _locked)
+			{
+				if (_node == null || _node.scaledSpaceTarget == null)
+					DestroyImmediate(this);
+			}
+
 			if (_pointer == null)
 				return;
 
@@ -329,7 +335,7 @@ namespace BetterManeuvering
 				}
 				else
 				{
-					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z - _progradeIncrement);
+					_node.DeltaV = new Vector3d(_node.DeltaV.x, _node.DeltaV.y, _node.DeltaV.z - _progradeIncrement);
 					_node.solver.UpdateFlightPlan();
 				}
 			}
@@ -350,7 +356,7 @@ namespace BetterManeuvering
 				}
 				else
 				{
-					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, _gizmo.DeltaV.z + _progradeIncrement);
+					_node.DeltaV = new Vector3d(_node.DeltaV.x, _node.DeltaV.y, _node.DeltaV.z + _progradeIncrement);
 					_node.solver.UpdateFlightPlan();
 				}
 			}
@@ -371,7 +377,7 @@ namespace BetterManeuvering
 				}
 				else
 				{
-					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y - _normalIncrement, _gizmo.DeltaV.z);
+					_node.DeltaV = new Vector3d(_node.DeltaV.x, _node.DeltaV.y - _normalIncrement, _node.DeltaV.z);
 					_node.solver.UpdateFlightPlan();
 				}
 			}
@@ -392,7 +398,7 @@ namespace BetterManeuvering
 				}
 				else
 				{
-					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y + _normalIncrement, _gizmo.DeltaV.z);
+					_node.DeltaV = new Vector3d(_node.DeltaV.x, _node.DeltaV.y + _normalIncrement, _node.DeltaV.z);
 					_node.solver.UpdateFlightPlan();
 				}
 			}
@@ -413,7 +419,7 @@ namespace BetterManeuvering
 				}
 				else
 				{
-					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x - _radialIncrement, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
+					_node.DeltaV = new Vector3d(_node.DeltaV.x - _radialIncrement, _node.DeltaV.y, _node.DeltaV.z);
 					_node.solver.UpdateFlightPlan();
 				}
 			}
@@ -434,7 +440,7 @@ namespace BetterManeuvering
 				}
 				else
 				{
-					_node.DeltaV = new Vector3d(_gizmo.DeltaV.x + _radialIncrement, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
+					_node.DeltaV = new Vector3d(_node.DeltaV.x + _radialIncrement, _node.DeltaV.y, _node.DeltaV.z);
 					_node.solver.UpdateFlightPlan();
 				}
 			}
