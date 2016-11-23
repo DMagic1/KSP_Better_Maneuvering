@@ -68,6 +68,12 @@ namespace BetterManeuvering
 			if (!_isVisible)
 				return;
 
+			if (_gizmo == null && _locked)
+			{
+				if (_node == null || _node.scaledSpaceTarget == null)
+					DestroyImmediate(this);
+			}
+
 			if (Math.Abs(_oldDeltaV.magnitude - _node.DeltaV.magnitude) > 10)
 			{
 				_patch = _node.patch;
@@ -516,19 +522,7 @@ namespace BetterManeuvering
 						prevOUT = _node.UT - _patch.period;
 					}
 
-					//if (_patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER)
-					//{
-					//	_snapPanel.NextPatch.SetActive(true);
-
-					//	if (_patch.nextPatch.nextPatch.UTsoi > 0)
-					//		nextPUT = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.UTsoi - _patch.nextPatch.nextPatch.StartUT) / 2);
-					//	else if (_patch.nextPatch.nextPatch.eccentricity < 1)
-					//		nextPUT = _patch.nextPatch.nextPatch.StartUT + (_patch.nextPatch.nextPatch.period / 2);
-					//	else
-					//		nextPUT = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.EndUT - _patch.nextPatch.nextPatch.StartUT) / 2);
-					//}
-					//else
-						_snapPanel.NextPatch.SetActive(false);
+					_snapPanel.NextPatch.SetActive(false);
 
 					if (_patch.patchStartTransition == Orbit.PatchTransitionType.INITIAL || _patch.patchStartTransition == Orbit.PatchTransitionType.MANEUVER)
 						_snapPanel.PreviousPatch.SetActive(false);
@@ -760,7 +754,7 @@ namespace BetterManeuvering
 
 		private void nextPatch()
 		{
-			if (_patch == null || _patch.nextPatch == null || _patch.nextPatch.nextPatch == null || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.FINAL || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.IMPACT)
+			if (_patch == null || _patch.patchEndTransition == Orbit.PatchTransitionType.FINAL || _patch.nextPatch == null || _patch.nextPatch.nextPatch == null || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.FINAL || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.IMPACT)
 				return;
 
 			double time = 0;
