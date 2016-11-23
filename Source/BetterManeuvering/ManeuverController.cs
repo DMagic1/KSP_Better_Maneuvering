@@ -133,21 +133,6 @@ namespace BetterManeuvering
 			GameEvents.OnGameSettingsApplied.Remove(SettingsApplied);
 		}
 
-		//private void Update()
-		//{
-		//	if (snapPanel == null && inputPanel == null)
-		//		return;
-
-		//	if (currentNode == null || currentNode.attachedGizmo == null)
-		//	{
-		//		Destroy(snapPanel);
-		//		Destroy(inputPanel);
-
-		//		snapPanel = null;
-		//		inputPanel = null;
-		//	}
-		//}
-
 		private void LateUpdate()
 		{
 			if (MapView.MapIsEnabled)
@@ -540,22 +525,6 @@ namespace BetterManeuvering
 				break;
 			}
 
-			//RectTransform plusRect = currentGizmo.plusOrbitBtn.GetComponent<RectTransform>();
-
-			//maneuverLog("Plus Button Rect Anchored: {0:F4}\nPosition: {1:F4}\nPivot: {2:F4}\nAnchor Min: {3:F4}\nAnchor Max: {4:F4}\nScale: {5:F4}\nRotation: {5:F4}\nLocal Rotation: {6:F4}\nSize: {7:F4}\nImage Height: {8:F4}\nImage Width: {9:F4}"
-			//	, logLevels.log
-			//	, plusRect.anchoredPosition3D
-			//	, plusRect.position
-			//	, plusRect.pivot
-			//	, plusRect.anchorMin
-			//	, plusRect.anchorMax
-			//	, plusRect.localScale
-			//	, plusRect.rotation.eulerAngles
-			//	, plusRect.localRotation.eulerAngles
-			//	//, plusRect.sizeDelta
-			//	, currentGizmo.plusOrbitBtn.image.sprite.texture.height
-			//	, currentGizmo.plusOrbitBtn.image.sprite.texture.width);
-
 			attachGizmoHandlers();
 
 			if (settings.replaceGizmoButtons)
@@ -579,6 +548,7 @@ namespace BetterManeuvering
 
 				snapPanel = snap;
 				snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex);
+				snapPanels.Remove(snap);
 				return;
 			}
 
@@ -601,6 +571,7 @@ namespace BetterManeuvering
 
 				inputPanel = input;
 				inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, false);
+				inputPanels.Remove(input);
 				return;
 			}
 
