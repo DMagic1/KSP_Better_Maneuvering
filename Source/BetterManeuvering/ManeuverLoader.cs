@@ -146,7 +146,7 @@ namespace BetterManeuvering
 
 			if (loadedPrefabs == null)
 			{
-				string path = KSPUtil.ApplicationRootPath + "GameData/BetterManeuver/Resources";
+				string path = KSPUtil.ApplicationRootPath + "GameData/ManeuverNodeEvolved/Resources";
 
 				AssetBundle prefabs = AssetBundle.LoadFromFile(path + "/better_maneuver_prefabs");
 
@@ -176,13 +176,13 @@ namespace BetterManeuvering
 
 		private void loadTextures()
 		{
-			Texture2D inputNormal = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Input_Normal", false);
-			Texture2D inputHighlight = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Input_Highlight", false);
-			Texture2D inputActive = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Input_Active", false);
+			Texture2D inputNormal = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Input_Normal", false);
+			Texture2D inputHighlight = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Input_Highlight", false);
+			Texture2D inputActive = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Input_Active", false);
 
-			Texture2D snapNormal = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Snap_Normal", false);
-			Texture2D snapHighlight = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Snap_Highlight", false);
-			Texture2D snapActive = GameDatabase.Instance.GetTexture("BetterManeuver/Resources/Snap_Active", false);
+			Texture2D snapNormal = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Snap_Normal", false);
+			Texture2D snapHighlight = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Snap_Highlight", false);
+			Texture2D snapActive = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Snap_Active", false);
 
 			if (inputNormal != null && inputHighlight != null && inputActive != null)
 			{
