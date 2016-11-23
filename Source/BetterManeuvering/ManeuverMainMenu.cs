@@ -1,6 +1,8 @@
 ﻿#region license
 /*The MIT License (MIT)
+
 ManeuverMainMenu - Monobehaviour to attach settings file persistence logic to new game creation
+
 Copyright (c) 2016 DMagic
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
