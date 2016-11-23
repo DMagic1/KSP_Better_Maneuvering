@@ -1,11 +1,34 @@
-﻿using System;
+﻿#region license
+/*The MIT License (MIT)
+
+ManeuverController - Primary addon controller; modifies stock maneuver node behavior
+
+Copyright (c) 2016 DMagic
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+#endregion
+
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using KSP.UI.Screens.Mapview.MapContextMenuOptions;
 
 namespace BetterManeuvering
@@ -24,7 +47,6 @@ namespace BetterManeuvering
 		
 		private KeyCode shortcut = KeyCode.N;
 
-		private Camera camera;
 		private PopupDialog maneuverDialog;
 		private ManeuverNode currentNode;
 		private ManeuverGizmo currentGizmo;
@@ -78,8 +100,6 @@ namespace BetterManeuvering
 			onGizmoSpawn.Add(gizmoSpawn);
 			onGizmoDestroy.Add(gizmoDestroy);
 			GameEvents.onVesselChange.Add(onVesselChange);
-			GameEvents.OnMapEntered.Add(enterMap);
-			GameEvents.OnMapExited.Add(exitMap);
 			GameEvents.OnGameSettingsApplied.Add(SettingsApplied);
 
 			settings = HighLogic.CurrentGame.Parameters.CustomParams<ManeuverGameParams>();
@@ -110,31 +130,26 @@ namespace BetterManeuvering
 			onGizmoSpawn.Remove(gizmoSpawn);
 			onGizmoDestroy.Remove(gizmoDestroy);
 			GameEvents.onVesselChange.Remove(onVesselChange);
-			GameEvents.OnMapEntered.Remove(enterMap);
-			GameEvents.OnMapExited.Remove(exitMap);
 			GameEvents.OnGameSettingsApplied.Remove(SettingsApplied);
 		}
 
-		private void Update()
-		{
-			if (snapPanel == null && inputPanel == null)
-				return;
+		//private void Update()
+		//{
+		//	if (snapPanel == null && inputPanel == null)
+		//		return;
 
-			if (currentNode == null || currentNode.attachedGizmo == null)
-			{
-				Destroy(snapPanel);
-				Destroy(inputPanel);
+		//	if (currentNode == null || currentNode.attachedGizmo == null)
+		//	{
+		//		Destroy(snapPanel);
+		//		Destroy(inputPanel);
 
-				snapPanel = null;
-				inputPanel = null;
-			}
-		}
+		//		snapPanel = null;
+		//		inputPanel = null;
+		//	}
+		//}
 
 		private void LateUpdate()
 		{
-			//if (currentNode == null)
-			//	return;
-
 			if (MapView.MapIsEnabled)
 			{
 				if (settings.useKeyboard)
@@ -176,25 +191,22 @@ namespace BetterManeuvering
 					}
 				}
 
-				if (camera != null)
+				if (currentGizmo != null)
 				{
-					if (currentGizmo != null)
+					if (settings.dynamicScaling)
 					{
-						if (settings.dynamicScaling)
+						if (PlanetariumCamera.fetch != null)
 						{
-							if (PlanetariumCamera.fetch != null)
-							{
-								float distance = (PlanetariumCamera.Camera.transform.position - currentGizmo.transform.position).magnitude;
-								
-								if (distance < 0)
-									distance = 0;
+							float distance = (PlanetariumCamera.Camera.transform.position - currentGizmo.transform.position).magnitude;
 
-								float lerp = 2 / (1 + Mathf.Exp((-1 * distance * 0.0001f)));
+							if (distance < 0)
+								distance = 0;
 
-								float scale = Mathf.Lerp(settings.baseScale, settings.maxScale < settings.baseScale ? settings.baseScale + 0.1f : settings.maxScale, lerp - 1);
+							float lerp = 2 / (1 + Mathf.Exp((-1 * distance * 0.0001f)));
 
-								currentGizmo.screenSize = originalScale * scale;
-							}
+							float scale = Mathf.Lerp(settings.baseScale, settings.maxScale < settings.baseScale ? settings.baseScale + 0.1f : settings.maxScale, lerp - 1);
+
+							currentGizmo.screenSize = originalScale * scale;
 						}
 					}
 				}
@@ -310,14 +322,14 @@ namespace BetterManeuvering
 
 			double trueAnomaly = refPatch.TrueAnomalyAtUT(UT) * Mathf.Rad2Deg;
 
-			double minAnomalyTime = refPatch.GetUTforTrueAnomaly((trueAnomaly - 10 < -180 ? trueAnomaly -10 + 360 : trueAnomaly - 10) * Mathf.Deg2Rad, 0);
-			double maxAnomalyTime = refPatch.GetUTforTrueAnomaly((trueAnomaly + 10 > 180 ? trueAnomaly + 10 - 360 : trueAnomaly + 10) * Mathf.Deg2Rad, 0);
+			double minAnomalyTime = refPatch.GetUTforTrueAnomaly((trueAnomaly - settings.selectionTolerance < -180 ? trueAnomaly - settings.selectionTolerance + 360 : trueAnomaly - settings.selectionTolerance) * Mathf.Deg2Rad, 0);
+			double maxAnomalyTime = refPatch.GetUTforTrueAnomaly((trueAnomaly + settings.selectionTolerance > 180 ? trueAnomaly + settings.selectionTolerance - 360 : trueAnomaly + settings.selectionTolerance) * Mathf.Deg2Rad, 0);
 
 			if (minAnomalyTime > UT && refPatch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
 				minAnomalyTime -= refPatch.period;
 
-			double minAnomalyTimeWide = refPatch.GetUTforTrueAnomaly((trueAnomaly - 15 < -180 ? trueAnomaly - 15 + 360 : trueAnomaly - 15) * Mathf.Deg2Rad, 0);
-			double maxAnomalyTimeWide = refPatch.GetUTforTrueAnomaly((trueAnomaly + 15 > 180 ? trueAnomaly + 15 - 360 : trueAnomaly + 15) * Mathf.Deg2Rad, 0);
+			double minAnomalyTimeWide = refPatch.GetUTforTrueAnomaly((trueAnomaly - (settings.selectionTolerance + 5) < -180 ? trueAnomaly - (settings.selectionTolerance + 5) + 360 : trueAnomaly - (settings.selectionTolerance + 5)) * Mathf.Deg2Rad, 0);
+			double maxAnomalyTimeWide = refPatch.GetUTforTrueAnomaly((trueAnomaly + (settings.selectionTolerance + 5) > 180 ? trueAnomaly + (settings.selectionTolerance + 5) - 360 : trueAnomaly + (settings.selectionTolerance + 5)) * Mathf.Deg2Rad, 0);
 
 			if (minAnomalyTimeWide > UT && refPatch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
 				minAnomalyTimeWide -= refPatch.period;
@@ -368,7 +380,7 @@ namespace BetterManeuvering
 				{
 					AddManeuver man = new AddManeuver(pcr, newUT);
 
-					man.OptionText = "Add Maneuver To Asc Node";
+					man.OptionText = "Add Maneuver To Target Asc Node";
 
 					newManeuvers.Add(man);
 				}
@@ -377,7 +389,7 @@ namespace BetterManeuvering
 				{
 					AddManeuver man = new AddManeuver(pcr, newUT);
 
-					man.OptionText = "Add Maneuver To Desc Node";
+					man.OptionText = "Add Maneuver To Target Desc Node";
 
 					newManeuvers.Add(man);
 				}
@@ -418,7 +430,7 @@ namespace BetterManeuvering
 					{
 						AddManeuver man = new AddManeuver(pcr, newUT);
 
-						man.OptionText = "Add Maneuver Closest Approach";
+						man.OptionText = "Add Maneuver To Closest Approach";
 
 						newManeuvers.Add(man);
 					}
@@ -673,14 +685,13 @@ namespace BetterManeuvering
 				value = value / floor;
 
 				for (int i = 0; i < floor; i++)
-				{
 					ProgradeUpdate(value, node, ignore, gizmo);
-				}
 			}
 			else
 				ProgradeUpdate(value, node, ignore, gizmo);
 
-			UpdateInputPanel();
+			if (!ignore)
+				UpdateInputPanel();
 		}
 
 		private void ProgradeUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
@@ -725,14 +736,13 @@ namespace BetterManeuvering
 				value = value / floor;
 
 				for (int i = 0; i < floor; i++)
-				{
 					RetrogradeUpdate(value, node, ignore, gizmo);
-				}
 			}
 			else
 				RetrogradeUpdate(value, node, ignore, gizmo);
 
-			UpdateInputPanel();
+			if (!ignore)
+				UpdateInputPanel();
 		}
 
 		private void RetrogradeUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
@@ -777,14 +787,13 @@ namespace BetterManeuvering
 				value = value / floor;
 
 				for (int i = 0; i < floor; i++)
-				{
 					NormalUpdate(value, node, ignore, gizmo);
-				}
 			}
 			else
 				NormalUpdate(value, node, ignore, gizmo);
 
-			UpdateInputPanel();
+			if (!ignore)
+				UpdateInputPanel();
 		}
 
 		private void NormalUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
@@ -829,14 +838,13 @@ namespace BetterManeuvering
 				value = value / floor;
 
 				for (int i = 0; i < floor; i++)
-				{
 					AntiNormalUpdate(value, node, ignore, gizmo);
-				}
 			}
 			else
 				AntiNormalUpdate(value, node, ignore, gizmo);
 
-			UpdateInputPanel();
+			if (!ignore)
+				UpdateInputPanel();
 		}
 
 		private void AntiNormalUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
@@ -881,14 +889,13 @@ namespace BetterManeuvering
 				value = value / floor;
 
 				for (int i = 0; i < floor; i++)
-				{
 					RadialInUpdate(value, node, ignore, gizmo);
-				}
 			}
 			else
 				RadialInUpdate(value, node, ignore, gizmo);
 
-			UpdateInputPanel();
+			if (!ignore)
+				UpdateInputPanel();
 		}
 
 		private void RadialInUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
@@ -933,14 +940,13 @@ namespace BetterManeuvering
 				value = value / floor;
 
 				for (int i = 0; i < floor; i++)
-				{
 					RadialOutUpdate(value, node, ignore, gizmo);
-				}
 			}
 			else
 				RadialOutUpdate(value, node, ignore, gizmo);
 
-			UpdateInputPanel();
+			if (!ignore)
+				UpdateInputPanel();
 		}
 
 		private void RadialOutUpdate(float value, ManeuverNode node, bool ignore, bool gizmo)
@@ -1022,20 +1028,10 @@ namespace BetterManeuvering
 			inputPanel.UpdateDeltaV();
 		}
 
-		private void enterMap()
-		{
-			camera = PlanetariumCamera.Camera;
-		}
-
-		private void exitMap()
-		{
-			camera = null;
-		}
-
 		public static void maneuverLog(string message, logLevels l, params object[] objs)
 		{
 			message = string.Format(message, objs);
-			string log = string.Format("[Better Maneuvering] {0}", message);
+			string log = string.Format("[Maneuver_Node_Evolved] {0}", message);
 			switch (l)
 			{
 				case logLevels.log:
