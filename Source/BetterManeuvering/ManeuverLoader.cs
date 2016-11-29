@@ -53,6 +53,16 @@ namespace BetterManeuvering
 		private static Sprite _snapButtonHighlight;
 		private static Sprite _snapButtonActive;
 
+		private static Sprite _nextButtonNormal;
+		private static Sprite _nextButtonHighlight;
+		private static Sprite _nextButtonActive;
+		private static Sprite _nextButtonInactive;
+
+		private static Sprite _prevButtonNormal;
+		private static Sprite _prevButtonHighlight;
+		private static Sprite _prevButtonActive;
+		private static Sprite _prevButtonInactive;
+
 		private static Sprite ButtonNormal;
 		private static Sprite ButtonHighlight;
 		private static Sprite ButtonActive;
@@ -139,6 +149,46 @@ namespace BetterManeuvering
 			get { return _snapButtonActive; }
 		}
 
+		public static Sprite NextButtonNormal
+		{
+			get { return _nextButtonNormal; }
+		}
+
+		public static Sprite NextButtonHighlight
+		{
+			get { return _nextButtonHighlight; }
+		}
+
+		public static Sprite NextButtonActive
+		{
+			get { return _nextButtonActive; }
+		}
+
+		public static Sprite NextButtonInactive
+		{
+			get { return _nextButtonInactive; }
+		}
+
+		public static Sprite PrevButtonNormal
+		{
+			get { return _prevButtonNormal; }
+		}
+
+		public static Sprite PrevButtonHighlight
+		{
+			get { return _prevButtonHighlight; }
+		}
+
+		public static Sprite PrevButtonActive
+		{
+			get { return _prevButtonActive; }
+		}
+
+		public static Sprite PrevButtonInactive
+		{
+			get { return _prevButtonInactive; }
+		}
+
 		private void Start()
 		{
 			if (loaded)
@@ -148,7 +198,7 @@ namespace BetterManeuvering
 			{
 				string path = KSPUtil.ApplicationRootPath + "GameData/ManeuverNodeEvolved/Resources";
 
-				AssetBundle prefabs = AssetBundle.LoadFromFile(path + "/better_maneuver_prefabs");
+				AssetBundle prefabs = AssetBundle.LoadFromFile(path + "/better_maneuver_prefabs.ksp");
 
 				if (prefabs != null)
 					loadedPrefabs = prefabs.LoadAllAssets<GameObject>();
@@ -184,6 +234,16 @@ namespace BetterManeuvering
 			Texture2D snapHighlight = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Snap_Highlight", false);
 			Texture2D snapActive = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Snap_Active", false);
 
+			Texture2D nextNormal = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Next_Normal", false);
+			Texture2D nextHighlight = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Next_Highlight", false);
+			Texture2D nextActive = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Next_Active", false);
+			Texture2D nextInactive = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Next_InActive", false);
+
+			Texture2D prevNormal = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Previous_Normal", false);
+			Texture2D prevHighlight = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Previous_Highlight", false);
+			Texture2D prevActive = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Previous_Active", false);
+			Texture2D prevInactive = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Previous_InActive", false);
+
 			if (inputNormal != null && inputHighlight != null && inputActive != null)
 			{
 				_inputButtonNormal = Sprite.Create(inputNormal, new Rect(0, 0, inputNormal.width, inputNormal.height), new Vector2(0.5f, 0.5f));
@@ -196,6 +256,22 @@ namespace BetterManeuvering
 				_snapButtonNormal = Sprite.Create(snapNormal, new Rect(0, 0, snapNormal.width, snapNormal.height), new Vector2(0.5f, 0.5f));
 				_snapButtonHighlight = Sprite.Create(snapHighlight, new Rect(0, 0, snapHighlight.width, snapHighlight.height), new Vector2(0.5f, 0.5f));
 				_snapButtonActive = Sprite.Create(snapActive, new Rect(0, 0, snapActive.width, snapActive.height), new Vector2(0.5f, 0.5f));
+			}
+
+			if (nextNormal != null && nextHighlight != null && nextActive != null && nextInactive != null)
+			{
+				_nextButtonNormal = Sprite.Create(nextNormal, new Rect(0, 0, inputNormal.width, inputNormal.height), new Vector2(0.5f, 0.5f));
+				_nextButtonHighlight = Sprite.Create(nextHighlight, new Rect(0, 0, inputHighlight.width, inputHighlight.height), new Vector2(0.5f, 0.5f));
+				_nextButtonActive = Sprite.Create(nextActive, new Rect(0, 0, inputActive.width, inputActive.height), new Vector2(0.5f, 0.5f));
+				_nextButtonInactive = Sprite.Create(nextInactive, new Rect(0, 0, inputActive.width, inputActive.height), new Vector2(0.5f, 0.5f));
+			}
+
+			if (prevNormal != null && prevHighlight != null && prevActive != null && prevInactive != null)
+			{
+				_prevButtonNormal = Sprite.Create(prevNormal, new Rect(0, 0, snapNormal.width, snapNormal.height), new Vector2(0.5f, 0.5f));
+				_prevButtonHighlight = Sprite.Create(prevHighlight, new Rect(0, 0, snapHighlight.width, snapHighlight.height), new Vector2(0.5f, 0.5f));
+				_prevButtonActive = Sprite.Create(prevActive, new Rect(0, 0, snapActive.width, snapActive.height), new Vector2(0.5f, 0.5f));
+				_prevButtonInactive = Sprite.Create(prevInactive, new Rect(0, 0, snapActive.width, snapActive.height), new Vector2(0.5f, 0.5f));
 			}
 
 			if (_inputButtonNormal != null && _inputButtonHighlight != null && _inputButtonActive != null && _snapButtonNormal != null && _snapButtonHighlight != null && _snapButtonActive != null)
@@ -262,7 +338,6 @@ namespace BetterManeuvering
 			tmp.fontStyle = sty;
 			tmp.lineSpacing = spacing;
 
-			//Load the TMP Font from disk
 			tmp.font = Resources.Load("Fonts/Calibri SDF", typeof(TMP_FontAsset)) as TMP_FontAsset;
 			tmp.fontSharedMaterial = Resources.Load("Fonts/Materials/Calibri Dropshadow", typeof(Material)) as Material;
 
@@ -346,17 +421,6 @@ namespace BetterManeuvering
 			Image Title = windowPrefab.titleBar.gameObject.GetComponent<Image>();
 			TitleBackground = Title.sprite;
 			TitleColor = Title.color;
-
-			//ManeuverController.maneuverLog("Title Rect Anchored: {0:F4}\nPosition: {1:F4}\nPivot: {2:F4}\nAnchor Min: {3:F4}\nAnchor Max: {4:F4}\nScale: {5:F4}\nRotation: {5:F4}\nLocal Rotation: {6:F4}"
-			//	, logLevels.log
-			//	, windowPrefab.titleBar.anchoredPosition3D
-			//	, windowPrefab.titleBar.position
-			//	, windowPrefab.titleBar.pivot
-			//	, windowPrefab.titleBar.anchorMin
-			//	, windowPrefab.titleBar.anchorMax
-			//	, windowPrefab.titleBar.localScale
-			//	, windowPrefab.titleBar.rotation.eulerAngles
-			//	, windowPrefab.titleBar.localRotation.eulerAngles);
 
 			UIMaterial = Title.material;
 
