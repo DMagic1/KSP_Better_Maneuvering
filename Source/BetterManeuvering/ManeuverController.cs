@@ -29,6 +29,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
 using KSP.UI.Screens.Mapview.MapContextMenuOptions;
 
 namespace BetterManeuvering
@@ -53,6 +54,9 @@ namespace BetterManeuvering
 		private PatchedConicRenderer pcr;
 		private float originalScale;
 
+		private bool mouseDown;
+		private float holdTime = 0.3f;
+
 		private int lastManeuverIndex;
 
 		private int accuracy = 2;
@@ -69,6 +73,9 @@ namespace BetterManeuvering
 
 		private ManeuverInputPanel inputPanel;
 		private ManeuverSnapPanel snapPanel;
+
+		private Button cycleForwardButton;
+		private Button cycleBackButton;
 
 		private List<ManeuverInputPanel> inputPanels = new List<ManeuverInputPanel>();
 		private List<ManeuverSnapPanel> snapPanels = new List<ManeuverSnapPanel>();
@@ -171,7 +178,37 @@ namespace BetterManeuvering
 								}
 							}
 							else
+							{
+								if (currentGizmo != null)
+								{
+									if (snapPanel != null)
+									{
+										if (snapPanel.Locked)
+										{
+											snapPanel.CloseGizmo();
+											snapPanels.Add(snapPanel);
+										}
+										else
+											Destroy(snapPanel);
+									}
+
+									if (inputPanel != null)
+									{
+										if (inputPanel.Locked)
+										{
+											inputPanel.CloseGizmo();
+											inputPanels.Add(inputPanel);
+										}
+										else
+											Destroy(inputPanel);
+									}
+
+									snapPanel = null;
+									inputPanel = null;
+								}
+
 								currentNode.DetachGizmo();
+							}
 						}
 					}
 				}
@@ -194,8 +231,50 @@ namespace BetterManeuvering
 							currentGizmo.screenSize = originalScale * scale;
 						}
 					}
+
+					if (settings.rightClickClose)
+					{
+						if (pcr == null)
+							return;
+
+						if (pcr.MouseOverNodes)
+							return;
+
+						if (Input.GetMouseButtonDown(1) && !mouseDown)
+						{
+							if ((snapPanel != null && snapPanel.IsVisible) || inputPanel != null && inputPanel.IsVisible)
+								StartCoroutine(mouseRoutine());
+						}
+					}
 				}
 			}
+		}
+
+		private IEnumerator mouseRoutine()
+		{
+			mouseDown = true;
+
+			float timer = Time.realtimeSinceStartup;
+
+			while (Time.realtimeSinceStartup - timer < holdTime)
+			{
+				if (Input.GetMouseButtonUp(1))
+				{
+					if (snapPanel != null && snapPanel.IsVisible && !snapPanel.Locked)
+						snapPanel.ToggleUI();
+
+					if (inputPanel != null && inputPanel.IsVisible && !inputPanel.Locked)
+						inputPanel.ToggleUI();
+
+					mouseDown = false;
+
+					yield break;
+				}
+
+				yield return null;
+			}
+
+			mouseDown = false;
 		}
 
 		private IEnumerator startup()
@@ -525,7 +604,23 @@ namespace BetterManeuvering
 				break;
 			}
 
+			//RectTransform plusRect = currentGizmo.deleteBtn.GetComponent<RectTransform>();
+			//maneuverLog("Delete Button Rect Anchored: {0:F4}\nPosition: {1:F4}\nPivot: {2:F4}\nAnchor Min: {3:F4}\nAnchor Max: {4:F4}\nScale: {5:F4}\nRotation: {6:F4}\nLocal Rotation: {7:F4}\nSize: {8:F4}"
+			//, logLevels.log
+			//, plusRect.anchoredPosition3D
+			//, plusRect.position
+			//, plusRect.pivot
+			//, plusRect.anchorMin
+			//, plusRect.anchorMax
+			//, plusRect.localScale
+			//, plusRect.rotation.eulerAngles
+			//, plusRect.localRotation.eulerAngles
+			//, plusRect.sizeDelta);
+
 			attachGizmoHandlers();
+
+			if (settings.showManeuverCycle)
+				attachCycleButtons();
 
 			if (settings.replaceGizmoButtons)
 			{
@@ -547,14 +642,14 @@ namespace BetterManeuvering
 					continue;
 
 				snapPanel = snap;
-				snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex);
+				snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex, false);
 				snapPanels.Remove(snap);
 				return;
 			}
 
 			snapPanel = gameObject.AddComponent<ManeuverSnapPanel>();
 
-			snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex);
+			snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex, settings.rememberManualInput);
 		}
 
 		private void attachNewInputButton()
@@ -578,6 +673,211 @@ namespace BetterManeuvering
 			inputPanel = gameObject.AddComponent<ManeuverInputPanel>();
 
 			inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, settings.rememberManualInput);
+		}
+
+		private void attachCycleButtons()
+		{
+			RectTransform deleteRect = currentGizmo.deleteBtn.GetComponent<RectTransform>();
+			deleteRect.anchoredPosition3D = new Vector3(0, deleteRect.anchoredPosition3D.y, deleteRect.anchoredPosition3D.z);
+			deleteRect.localScale = deleteRect.localScale * 0.8f;
+
+			cycleForwardButton = Instantiate<Button>(currentGizmo.plusOrbitBtn);
+
+			cycleForwardButton.transform.SetParent(currentGizmo.plusOrbitBtn.transform.parent);
+
+			RectTransform forwardRect = cycleForwardButton.GetComponent<RectTransform>();
+
+			RectTransform oldRect = currentGizmo.plusOrbitBtn.GetComponent<RectTransform>();
+
+			forwardRect.position = oldRect.position;
+			forwardRect.anchoredPosition3D = new Vector3(oldRect.anchoredPosition3D.x + 4, 24, oldRect.anchoredPosition3D.z);
+			forwardRect.localScale = oldRect.localScale * 0.8f;
+			forwardRect.rotation = oldRect.rotation;
+			forwardRect.localRotation = oldRect.localRotation;
+
+			//maneuverLog("Cycle Button Rect Anchored: {0:F4}\nPosition: {1:F4}\nPivot: {2:F4}\nAnchor Min: {3:F4}\nAnchor Max: {4:F4}\nScale: {5:F4}\nRotation: {6:F4}\nLocal Rotation: {7:F4}\nSize: {8:F4}"
+			//, logLevels.log
+			//, forwardRect.anchoredPosition3D
+			//, forwardRect.position
+			//, forwardRect.pivot
+			//, forwardRect.anchorMin
+			//, forwardRect.anchorMax
+			//, forwardRect.localScale
+			//, forwardRect.rotation.eulerAngles
+			//, forwardRect.localRotation.eulerAngles
+			//, forwardRect.sizeDelta);
+
+			cycleForwardButton.navigation = new Navigation() { mode = Navigation.Mode.None };
+
+			cycleForwardButton.onClick.RemoveAllListeners();
+			cycleForwardButton.onClick.AddListener(new UnityAction(cycleForward));
+			cycleForwardButton.interactable = true;
+
+			Selectable nextSelect = cycleForwardButton.GetComponent<Selectable>();
+
+			nextSelect.image.sprite = ManeuverLoader.NextButtonNormal;
+
+			SpriteState state = nextSelect.spriteState;
+			state.highlightedSprite = ManeuverLoader.NextButtonHighlight;
+			state.pressedSprite = ManeuverLoader.NextButtonActive;
+			state.disabledSprite = ManeuverLoader.NextButtonInactive;
+			nextSelect.spriteState = state;
+
+			oldRect.localScale = oldRect.localScale * 0.9f;
+			oldRect.anchoredPosition3D = new Vector3(oldRect.anchoredPosition3D.x - 4, oldRect.anchoredPosition3D.y - 4, oldRect.anchoredPosition3D.z);
+
+			cycleBackButton = Instantiate<Button>(currentGizmo.minusOrbitbtn);
+
+			cycleBackButton.transform.SetParent(currentGizmo.minusOrbitbtn.transform.parent);
+
+			RectTransform backRect = cycleBackButton.GetComponent<RectTransform>();
+
+			oldRect = currentGizmo.minusOrbitbtn.GetComponent<RectTransform>();
+
+			backRect.position = oldRect.position;
+			backRect.anchoredPosition3D = new Vector3(oldRect.anchoredPosition3D.x - 4, 24, oldRect.anchoredPosition3D.z);
+			backRect.localScale = oldRect.localScale * 0.8f;
+			backRect.rotation = oldRect.rotation;
+			backRect.localRotation = oldRect.localRotation;
+
+			cycleBackButton.navigation = new Navigation() { mode = Navigation.Mode.None };
+
+			cycleBackButton.onClick.RemoveAllListeners();
+			cycleBackButton.onClick.AddListener(new UnityAction(cycleBackward));
+			cycleBackButton.interactable = true;
+
+			Selectable prevSelect = cycleBackButton.GetComponent<Selectable>();
+
+			prevSelect.image.sprite = ManeuverLoader.PrevButtonNormal;
+
+			SpriteState backState = nextSelect.spriteState;
+			state.highlightedSprite = ManeuverLoader.PrevButtonHighlight;
+			state.pressedSprite = ManeuverLoader.PrevButtonActive;
+			state.disabledSprite = ManeuverLoader.PrevButtonInactive;
+			prevSelect.spriteState = state;
+
+			oldRect.localScale = oldRect.localScale * 0.9f;
+			oldRect.anchoredPosition3D = new Vector3(oldRect.anchoredPosition3D.x + 4, oldRect.anchoredPosition3D.y - 4, oldRect.anchoredPosition3D.z);
+
+			updateCycleButtons();
+		}
+
+		private void cycleForward()
+		{
+			if (pcr == null)
+				return;
+
+			int count = pcr.solver.maneuverNodes.Count;
+
+			if (count <= 1)
+				return;
+
+			int newIndex = lastManeuverIndex + 1;
+
+			if (newIndex >= count)
+				newIndex = 0;
+
+			if (currentGizmo != null)
+			{
+				if (snapPanel != null)
+				{
+					if (snapPanel.Locked)
+					{
+						snapPanel.CloseGizmo();
+						snapPanels.Add(snapPanel);
+					}
+					else
+						Destroy(snapPanel);
+				}
+
+				if (inputPanel != null)
+				{
+					if (inputPanel.Locked)
+					{
+						inputPanel.CloseGizmo();
+						inputPanels.Add(inputPanel);
+					}
+					else
+						Destroy(inputPanel);
+				}
+
+				snapPanel = null;
+				inputPanel = null;
+			}
+
+			currentNode.DetachGizmo();
+			pcr.solver.maneuverNodes[newIndex].AttachGizmo(MapView.ManeuverNodePrefab, pcr);
+
+			updateCycleButtons();
+		}
+
+		private void cycleBackward()
+		{
+			if (pcr == null)
+				return;
+
+			int count = pcr.solver.maneuverNodes.Count;
+
+			if (count <= 1)
+				return;
+
+			int newIndex = lastManeuverIndex - 1;
+
+			if (newIndex < 0)
+				newIndex = count - 1;
+
+			if (currentGizmo != null)
+			{
+				if (snapPanel != null)
+				{
+					if (snapPanel.Locked)
+					{
+						snapPanel.CloseGizmo();
+						snapPanels.Add(snapPanel);
+					}
+					else
+						Destroy(snapPanel);
+				}
+
+				if (inputPanel != null)
+				{
+					if (inputPanel.Locked)
+					{
+						inputPanel.CloseGizmo();
+						inputPanels.Add(inputPanel);
+					}
+					else
+						Destroy(inputPanel);
+				}
+
+				snapPanel = null;
+				inputPanel = null;
+			}
+
+			currentNode.DetachGizmo();
+			pcr.solver.maneuverNodes[newIndex].AttachGizmo(MapView.ManeuverNodePrefab, pcr);
+			
+			updateCycleButtons();
+		}
+
+		private void updateCycleButtons()
+		{
+			if (pcr == null)
+				return;
+
+			if (cycleBackButton == null || cycleForwardButton == null)
+				return;
+			
+			if (pcr.solver.maneuverNodes.Count <= 1)
+			{
+				cycleBackButton.interactable = false;
+				cycleForwardButton.interactable = false;
+			}
+			else
+			{
+				cycleForwardButton.interactable = true;
+				cycleBackButton.interactable = true;
+			}
 		}
 
 		private void attachGizmoHandlers()
