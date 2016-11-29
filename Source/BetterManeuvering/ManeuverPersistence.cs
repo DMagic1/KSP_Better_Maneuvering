@@ -52,7 +52,11 @@ namespace BetterManeuvering
 		[Persistent]
 		public bool replaceGizmoButtons = true;
 		[Persistent]
+		public bool rightClickClose = false;
+		[Persistent]
 		public bool rememberManualInput = true;
+		[Persistent]
+		public bool showManeuverCycle = true;
 		[Persistent]
 		public bool useKeyboard = true;
 		[Persistent]
@@ -105,7 +109,9 @@ namespace BetterManeuvering
 				alignToOrbit = settings.alignToOrbit;
 				accuracy = settings.accuracy;
 				replaceGizmoButtons = settings.replaceGizmoButtons;
+				rightClickClose = settings.rightClickClose;
 				rememberManualInput = settings.rememberManualInput;
+				showManeuverCycle = settings.showManeuverCycle;
 				useKeyboard = settings.useKeyboard;
 
 				if (Save())

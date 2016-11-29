@@ -43,8 +43,12 @@ namespace BetterManeuvering
 		public int accuracy = 2;
 		[GameParameters.CustomParameterUI("Replace Maneuver Gizmo Buttons", toolTip = "Use manual DeltaV input and maneuver reposition windows", autoPersistance = true)]
 		public bool replaceGizmoButtons = true;
+		[GameParameters.CustomParameterUI("Right Click To Close Maneuver Windows", toolTip = "Right click outside of any maneuver input window to close it when not locked", autoPersistance = true)]
+		public bool rightClickClose = false;
 		[GameParameters.CustomParameterUI("Remember Manual Input Values", toolTip = "New manual DeltaV input windows will always use the last-used DeltaV increment values", autoPersistance = true)]
 		public bool rememberManualInput = true;
+		[GameParameters.CustomParameterUI("Show Next/Previous Maneuver Node Buttons", toolTip = "Show buttons to cycle through multiple maneuver nodes on the maneuver button circle", autoPersistance = true)]
+		public bool showManeuverCycle = true;
 		[GameParameters.CustomParameterUI("Use Maneuver Node Keyboard Shortcut", toolTip = "Shortcut for opening/closing the currently focused node, the last opened node, or the first node", autoPersistance = true)]
 		public bool useKeyboard = true;
 		[GameParameters.CustomParameterUI("Use As Default", toolTip = "Save these settings to a file on disk to be used as defaults for newly created games", autoPersistance = false)]
@@ -64,7 +68,9 @@ namespace BetterManeuvering
 				alignToOrbit = ManeuverPersistence.Instance.alignToOrbit;
 				accuracy = ManeuverPersistence.Instance.accuracy;
 				replaceGizmoButtons = ManeuverPersistence.Instance.replaceGizmoButtons;
+				rightClickClose = ManeuverPersistence.Instance.rightClickClose;
 				rememberManualInput = ManeuverPersistence.Instance.rememberManualInput;
+				showManeuverCycle = ManeuverPersistence.Instance.showManeuverCycle;
 				useKeyboard = ManeuverPersistence.Instance.useKeyboard;
 			}
 		}
@@ -104,6 +110,9 @@ namespace BetterManeuvering
 
 			if (member.Name == "rememberManualInput")
 				return replaceGizmoButtons;
+
+			if (member.Name == "rightClickClose")
+				return replaceGizmoButtons;			
 
 			return true;
 		}
