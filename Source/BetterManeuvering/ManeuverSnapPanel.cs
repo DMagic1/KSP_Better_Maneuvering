@@ -43,6 +43,11 @@ namespace BetterManeuvering
 		private int _index;
 		private bool _locked;
 		private bool _hover;
+		private int _orbitsAdded;
+		private int _manualIncrement;
+		private double[] _allowedIncrements = new double[6] { 1, 10, 60, 100, 1000, 3600 };
+
+		private static int _persManualIncrement;
 
 		private double _startUT;
 		private double apoUT, periUT, nextOUT, prevOUT, nextPUT, prevPUT, eqAscUT, eqDescUT, relAscUT, relDescUT, clAppUT;
@@ -117,12 +122,17 @@ namespace BetterManeuvering
 			get { return _locked; }
 		}
 
+		public bool IsVisible
+		{
+			get { return _isVisible; }
+		}
+
 		public ManeuverNode Node
 		{
 			get { return _node; }
 		}
 
-		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i)
+		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i, bool remember)
 		{
 			if (node == null)
 				return;
@@ -133,6 +143,10 @@ namespace BetterManeuvering
 			_startUT = _node.UT;
 			_oldDeltaV = _node.DeltaV;
 			_index = i;
+			_orbitsAdded = _gizmo.orbitsAdded;
+
+			if (remember)
+				_manualIncrement = _persManualIncrement;
 
 			if (_snapButton == null)
 				_snapButton = Instantiate<Button>(gizmo.plusOrbitBtn);
@@ -182,7 +196,7 @@ namespace BetterManeuvering
 			_pointer.worldTransform = _node.scaledSpaceTarget.transform;
 		}
 
-		private void ToggleUI()
+		public void ToggleUI()
 		{
 			if (_isVisible)
 			{
@@ -205,6 +219,8 @@ namespace BetterManeuvering
 				_startUT = _node.UT;
 
 				attachUI();
+
+				_snapPanel.ManualIncText.OnTextUpdate.Invoke(_allowedIncrements[_manualIncrement].ToString("F0"));
 
 				checkOrbit();
 
@@ -265,6 +281,11 @@ namespace BetterManeuvering
 			_snapPanel.ClAppButton.onClick.AddListener(new UnityAction(clApp));
 			_snapPanel.ResetButton.onClick.AddListener(new UnityAction(reset));
 
+			_snapPanel.ManualDownButton.onClick.AddListener(new UnityAction(ManualShiftDown));
+			_snapPanel.ManualUpButton.onClick.AddListener(new UnityAction(ManualShiftUp));
+			_snapPanel.ManualIncDownButton.onClick.AddListener(new UnityAction(ManualIncrementDown));
+			_snapPanel.ManualIncUpButton.onClick.AddListener(new UnityAction(ManualIncrementUp));
+
 			_snapPanel.DragEvent.AddListener(new UnityAction<RectTransform>(clampToScreen));
 			_snapPanel.MouseOverEvent.AddListener(new UnityAction<bool>(SetMouseOverGizmo));
 
@@ -321,7 +342,10 @@ namespace BetterManeuvering
 			_locked = isOn;
 
 			if (_gizmo == null && !isOn)
-				OnDestroy();
+			{
+				SetMouseOverGizmo(false);
+				DestroyImmediate(this);
+			}
 		}
 
 		private void UpdateTimers()
@@ -332,10 +356,10 @@ namespace BetterManeuvering
 			_snapPanel.ResetTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(_startUT - UT, 3, false)));
 
 			if (_snapPanel.Apo.activeSelf)
-				_snapPanel.ApoTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(apoUT - UT, 3, false)));
+				_snapPanel.ApoTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((apoUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
 
 			if (_snapPanel.Peri.activeSelf)
-				_snapPanel.PeriTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(periUT - UT, 3, false)));
+				_snapPanel.PeriTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((periUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
 
 			if (_snapPanel.NextOrbit.activeSelf)
 				_snapPanel.NOTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(nextOUT - UT, 3, false)));
@@ -350,20 +374,19 @@ namespace BetterManeuvering
 				_snapPanel.PPTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(prevPUT - UT, 3, false)));
 
 			if (_snapPanel.EqAsc.activeSelf)
-				_snapPanel.EqAscTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(eqAscUT - UT, 3, false)));
+				_snapPanel.EqAscTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((eqAscUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
 
 			if (_snapPanel.EqDesc.activeSelf)
-				_snapPanel.EqDescTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(eqDescUT - UT, 3, false)));
+				_snapPanel.EqDescTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((eqDescUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
 
 			if (_snapPanel.RelAsc.activeSelf)
-				_snapPanel.RelAscTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(relAscUT - UT, 3, false)));
+				_snapPanel.RelAscTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((relAscUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
 
 			if (_snapPanel.RelDesc.activeSelf)
-				_snapPanel.RelDescTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(relDescUT - UT, 3, false)));
+				_snapPanel.RelDescTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((relDescUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
 
 			if (_snapPanel.ClApp.activeSelf)
 				_snapPanel.ApproachTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(clAppUT - UT, 3, false)));
-
 		}
 
 		private void checkOrbit()
@@ -378,6 +401,11 @@ namespace BetterManeuvering
 
 			if (_patch.eccentricity >= 1)
 			{
+				if (_gizmo != null)
+					_gizmo.orbitsAdded = 0;
+
+				_orbitsAdded = 0;
+
 				_snapPanel.Apo.SetActive(false);
 				_snapPanel.NextOrbit.SetActive(false);
 				_snapPanel.PreviousOrbit.SetActive(false);
@@ -578,6 +606,11 @@ namespace BetterManeuvering
 				}
 				else
 				{
+					if (_gizmo != null)
+						_gizmo.orbitsAdded = 0;
+
+					_orbitsAdded = 0;
+
 					_snapPanel.NextOrbit.SetActive(false);
 					_snapPanel.PreviousOrbit.SetActive(false);
 
@@ -736,6 +769,11 @@ namespace BetterManeuvering
 			if (_patch == null || _patch.eccentricity >= 1)
 				return;
 
+			if (_gizmo != null)
+				_gizmo.orbitsAdded += 1;
+
+			_orbitsAdded += 1;
+
 			setNodeTime(_node.UT + _patch.period);
 		}
 
@@ -748,6 +786,19 @@ namespace BetterManeuvering
 
 			if (time < Planetarium.GetUniversalTime())
 				return;
+
+			if (_gizmo != null)
+			{
+				_gizmo.orbitsAdded -= 1;
+
+				if (_gizmo.orbitsAdded < 0)
+					_gizmo.orbitsAdded = 0;
+			}
+
+			_orbitsAdded -= 1;
+
+			if (_orbitsAdded < 0)
+				_orbitsAdded = 0;
 
 			setNodeTime(time);
 		}
@@ -798,7 +849,7 @@ namespace BetterManeuvering
 			if (_patch.ApA > _patch.referenceBody.sphereOfInfluence)
 				return;
 			else
-				setNodeTime(_patch.StartUT + _patch.timeToAp);
+				setNodeTime(_patch.StartUT + _patch.timeToAp + (_orbitsAdded * _patch.period));
 		}
 
 		private void periapsis()
@@ -814,7 +865,7 @@ namespace BetterManeuvering
 			else if (_patch.UTsoi > 0 && _patch.timeToPe + _patch.StartUT > _patch.UTsoi)
 				return;
 			else
-				setNodeTime(_patch.StartUT + _patch.timeToPe);
+				setNodeTime(_patch.StartUT + _patch.timeToPe + (_orbitsAdded * _patch.period));
 		}
 
 		private void eqAsc()
@@ -829,7 +880,7 @@ namespace BetterManeuvering
 			else if (eqAsc < Planetarium.GetUniversalTime())
 				return;
 			else
-				setNodeTime(eqAsc);
+				setNodeTime(eqAsc + (_orbitsAdded * _patch.period));
 		}
 
 		private void eqDesc()
@@ -844,7 +895,7 @@ namespace BetterManeuvering
 			else if (eqDesc < Planetarium.GetUniversalTime())
 				return;
 			else
-				setNodeTime(eqDesc);
+				setNodeTime(eqDesc + (_orbitsAdded * _patch.period));
 		}
 
 		private void relAsc()
@@ -867,7 +918,7 @@ namespace BetterManeuvering
 			else if (relAsc < Planetarium.GetUniversalTime())
 				return;
 			else
-				setNodeTime(relAsc);
+				setNodeTime(relAsc + (_orbitsAdded * _patch.period));
 		}
 
 		private void relDesc()
@@ -890,7 +941,7 @@ namespace BetterManeuvering
 			else if (relDesc < Planetarium.GetUniversalTime())
 				return;
 			else
-				setNodeTime(relDesc);
+				setNodeTime(relDesc + (_orbitsAdded * _patch.period));
 		}
 
 		private void clApp()
@@ -921,12 +972,67 @@ namespace BetterManeuvering
 				setNodeTime(clApp);
 		}
 
+		private void ManualShiftDown()
+		{
+			double time = _node.UT - _allowedIncrements[_manualIncrement];
+
+			if (_patch.patchStartTransition == Orbit.PatchTransitionType.INITIAL && _patch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
+			{
+				if (time < (Planetarium.GetUniversalTime() + (_orbitsAdded * _patch.period)))
+					time += _patch.period;
+
+				setNodeTime(time);
+			}
+			else if (_patch.StartUT + 1 <= time)
+				setNodeTime(time);
+		}
+
+		private void ManualShiftUp()
+		{
+			double time = _node.UT + _allowedIncrements[_manualIncrement];
+
+			if (_patch.UTsoi > 0 && _patch.UTsoi - 1 <= time)
+				return;
+
+			if (_patch.patchStartTransition == Orbit.PatchTransitionType.INITIAL && _patch.patchEndTransition == Orbit.PatchTransitionType.FINAL && time >= (Planetarium.GetUniversalTime() + ((_orbitsAdded + 1) * _patch.period)))
+				time -= _patch.period;
+
+			setNodeTime(time);
+		}
+
+		private void ManualIncrementDown()
+		{
+			_manualIncrement--;
+
+			if (_manualIncrement < 0)
+				_manualIncrement = 0;
+
+			_persManualIncrement = _manualIncrement;
+
+			_snapPanel.ManualIncText.OnTextUpdate.Invoke(_allowedIncrements[_manualIncrement].ToString("F0"));
+		}
+
+		private void ManualIncrementUp()
+		{
+			_manualIncrement++;
+
+			if (_manualIncrement > 5)
+				_manualIncrement = 5;
+
+			_persManualIncrement = _manualIncrement;
+
+			_snapPanel.ManualIncText.OnTextUpdate.Invoke(_allowedIncrements[_manualIncrement].ToString("F0"));
+		}
+
 		private void reset()
 		{
 			if (_patch == null)
 				return;
 
 			setNodeTime(_startUT);
+
+			if (_patch.eccentricity < 1 && _patch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
+				_orbitsAdded = (int)((_startUT - _patch.StartUT) / _patch.period);
 		}
 	}
 }
