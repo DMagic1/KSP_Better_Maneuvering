@@ -60,6 +60,11 @@ namespace BetterManeuvering.Unity
 		public Button ClAppButton = null;
 		public Button ResetButton = null;
 		public Transform TitleTransform = null;
+		public Button ManualDownButton = null;
+		public Button ManualUpButton = null;
+		public Button ManualIncDownButton = null;
+		public Button ManualIncUpButton = null;
+		public TextHandler ManualIncText = null;
 		public TextHandler CurrentTime = null;
 		public TextHandler ApoTime = null;
 		public TextHandler PeriTime = null;
