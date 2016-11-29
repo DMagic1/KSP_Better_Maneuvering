@@ -104,6 +104,11 @@ namespace BetterManeuvering
 			get { return _locked; }
 		}
 
+		public bool IsVisible
+		{
+			get { return _isVisible; }
+		}
+
 		public ManeuverNode Node
 		{
 			get { return _node; }
@@ -184,7 +189,7 @@ namespace BetterManeuvering
 			_pointer.worldTransform = _node.scaledSpaceTarget.transform;
 		}
 
-		private void ToggleUI()
+		public void ToggleUI()
 		{
 			if (_isVisible)
 			{
@@ -319,7 +324,10 @@ namespace BetterManeuvering
 			_locked = isOn;
 
 			if (_gizmo == null && !isOn)
-				OnDestroy();
+			{
+				SetMouseOverGizmo(false);
+				DestroyImmediate(this);
+			}
 		}
 
 		private void ProgradeDown()
