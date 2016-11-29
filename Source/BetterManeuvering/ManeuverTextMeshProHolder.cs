@@ -42,10 +42,8 @@ namespace BetterManeuvering
 
 			_handler = GetComponent<TextHandler>();
 
-			if (_handler == null)
-				return;
-
-			_handler.OnTextUpdate.AddListener(new UnityAction<string>(UpdateText));
+			if (_handler != null)
+				_handler.OnTextUpdate.AddListener(new UnityAction<string>(UpdateText));
 		}
 
 		private void UpdateText(string t)
