@@ -198,7 +198,7 @@ namespace BetterManeuvering
 			{
 				string path = KSPUtil.ApplicationRootPath + "GameData/ManeuverNodeEvolved/Resources";
 
-				AssetBundle prefabs = AssetBundle.LoadFromFile(path + "/better_maneuver_prefabs.ksp");
+				AssetBundle prefabs = AssetBundle.LoadFromFile(path + "/better_maneuver_prefabs");
 
 				if (prefabs != null)
 					loadedPrefabs = prefabs.LoadAllAssets<GameObject>();
