@@ -43,6 +43,7 @@ namespace BetterManeuvering
 		private int _index;
 		private bool _locked;
 		private bool _hover;
+		private bool _showLines;
 		private int _orbitsAdded;
 		private int _manualIncrement;
 		private double[] _allowedIncrements = new double[6] { 1, 10, 60, 100, 1000, 3600 };
@@ -62,11 +63,6 @@ namespace BetterManeuvering
 		private ManeuverSnap _snapPanel;
 
 		private double _lastUpdate;
-
-		private void Awake()
-		{
-
-		}
 
 		private void Update()
 		{
@@ -132,7 +128,7 @@ namespace BetterManeuvering
 			get { return _node; }
 		}
 
-		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i, bool remember)
+		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i, bool remember, bool lines)
 		{
 			if (node == null)
 				return;
@@ -144,6 +140,7 @@ namespace BetterManeuvering
 			_oldDeltaV = _node.DeltaV;
 			_index = i;
 			_orbitsAdded = _gizmo.orbitsAdded;
+			_showLines = lines;
 
 			if (remember)
 				_manualIncrement = _persManualIncrement;
@@ -228,7 +225,8 @@ namespace BetterManeuvering
 
 				reposition();
 
-				attachPointer();
+				if (_showLines)
+					attachPointer();
 
 				_isVisible = true;
 			}
@@ -355,11 +353,16 @@ namespace BetterManeuvering
 			_snapPanel.CurrentTime.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: T {1}", _index + 1, KSPUtil.PrintTime(UT - _node.UT, 3, true)));
 			_snapPanel.ResetTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(_startUT - UT, 3, false)));
 
+			double periods = 0;
+
+			if (!double.IsNaN(_patch.period) && !double.IsInfinity(_patch.period))
+				periods = (_orbitsAdded * _patch.period);
+
 			if (_snapPanel.Apo.activeSelf)
-				_snapPanel.ApoTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((apoUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
+				_snapPanel.ApoTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((apoUT + periods) - UT, 3, false)));
 
 			if (_snapPanel.Peri.activeSelf)
-				_snapPanel.PeriTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((periUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
+				_snapPanel.PeriTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((periUT + periods) - UT, 3, false)));
 
 			if (_snapPanel.NextOrbit.activeSelf)
 				_snapPanel.NOTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(nextOUT - UT, 3, false)));
@@ -374,16 +377,16 @@ namespace BetterManeuvering
 				_snapPanel.PPTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(prevPUT - UT, 3, false)));
 
 			if (_snapPanel.EqAsc.activeSelf)
-				_snapPanel.EqAscTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((eqAscUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
+				_snapPanel.EqAscTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((eqAscUT + periods) - UT, 3, false)));
 
 			if (_snapPanel.EqDesc.activeSelf)
-				_snapPanel.EqDescTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((eqDescUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
+				_snapPanel.EqDescTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((eqDescUT + periods) - UT, 3, false)));
 
 			if (_snapPanel.RelAsc.activeSelf)
-				_snapPanel.RelAscTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((relAscUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
+				_snapPanel.RelAscTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((relAscUT + periods) - UT, 3, false)));
 
 			if (_snapPanel.RelDesc.activeSelf)
-				_snapPanel.RelDescTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((relDescUT + (_orbitsAdded * _patch.period)) - UT, 3, false)));
+				_snapPanel.RelDescTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime((relDescUT + periods) - UT, 3, false)));
 
 			if (_snapPanel.ClApp.activeSelf)
 				_snapPanel.ApproachTime.OnTextUpdate.Invoke(string.Format("{0}", KSPUtil.PrintTime(clAppUT - UT, 3, false)));
@@ -440,14 +443,14 @@ namespace BetterManeuvering
 				else
 					_snapPanel.EqDesc.SetActive(true);
 
-				if ((_patch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE)
+				if ((_patch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE || _patch.patchEndTransition == Orbit.PatchTransitionType.MANEUVER)
 					&& (_patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE))
 				{
 					_snapPanel.NextPatch.SetActive(true);
 
 					if (_patch.nextPatch.nextPatch.UTsoi > 0)
 						nextPUT = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.UTsoi - _patch.nextPatch.nextPatch.StartUT) / 2);
-					else if (_patch.nextPatch.nextPatch.eccentricity < 1)
+					else if (_patch.nextPatch.nextPatch.eccentricity < 1 && !double.IsNaN(_patch.nextPatch.nextPatch.period) && !double.IsInfinity(_patch.nextPatch.nextPatch.period))
 						nextPUT = _patch.nextPatch.nextPatch.StartUT + (_patch.nextPatch.nextPatch.period / 2);
 					else
 						nextPUT = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.EndUT - _patch.nextPatch.nextPatch.StartUT) / 2);
@@ -463,7 +466,7 @@ namespace BetterManeuvering
 
 					if (_patch.previousPatch.UTsoi > 0)
 						prevPUT = _patch.previousPatch.StartUT + ((_patch.previousPatch.UTsoi - _patch.previousPatch.StartUT) / 2);
-					else if (_patch.previousPatch.eccentricity < 1)
+					else if (_patch.previousPatch.eccentricity < 1 && !double.IsNaN(_patch.previousPatch.period) && !double.IsInfinity(_patch.previousPatch.period))
 						prevPUT = _patch.previousPatch.StartUT + (_patch.previousPatch.period / 2);
 					else
 						prevPUT = _patch.previousPatch.StartUT + ((_patch.previousPatch.EndUT - _patch.previousPatch.StartUT) / 2);
@@ -527,8 +530,13 @@ namespace BetterManeuvering
 			{
 				if (_patch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
 				{
-					_snapPanel.NextOrbit.SetActive(true);
-					nextOUT = _node.UT + _patch.period;
+					if (!double.IsNaN(_patch.period) && !double.IsInfinity(_patch.period))
+					{
+						_snapPanel.NextOrbit.SetActive(true);
+						nextOUT = _node.UT + _patch.period;
+					}
+					else
+						_snapPanel.NextOrbit.SetActive(false);
 
 					_snapPanel.Apo.SetActive(true);
 					apoUT = _patch.StartUT + _patch.timeToAp;
@@ -542,7 +550,7 @@ namespace BetterManeuvering
 					_snapPanel.EqDesc.SetActive(true);
 					eqDescUT = ManeuverUtilities.EqDescTime(_patch);
 
-					if (_node.UT - _patch.period < UT)
+					if (double.IsNaN(_patch.period) || double.IsInfinity(_patch.period) || _node.UT - _patch.period < UT)
 						_snapPanel.PreviousOrbit.SetActive(false);
 					else
 					{
@@ -560,7 +568,7 @@ namespace BetterManeuvering
 
 						if (_patch.previousPatch.UTsoi > 0)
 							prevPUT = _patch.previousPatch.StartUT + ((_patch.previousPatch.UTsoi - _patch.previousPatch.StartUT) / 2);
-						else if (_patch.previousPatch.eccentricity < 1)
+						else if (_patch.previousPatch.eccentricity < 1 && !double.IsNaN(_patch.previousPatch.period) && !double.IsInfinity(_patch.previousPatch.period))
 							prevPUT = _patch.previousPatch.StartUT + (_patch.previousPatch.period / 2);
 						else
 							prevPUT = _patch.previousPatch.StartUT + ((_patch.previousPatch.EndUT - _patch.previousPatch.StartUT) / 2);
@@ -656,14 +664,14 @@ namespace BetterManeuvering
 					else
 						_snapPanel.EqDesc.SetActive(true);
 
-					if ((_patch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE)
+					if ((_patch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE || _patch.patchEndTransition == Orbit.PatchTransitionType.MANEUVER)
 						&& (_patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE))
 					{
 						_snapPanel.NextPatch.SetActive(true);
 
 						if (_patch.nextPatch.nextPatch.UTsoi > 0)
 							nextPUT = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.UTsoi - _patch.nextPatch.nextPatch.StartUT) / 2);
-						else if (_patch.nextPatch.nextPatch.eccentricity < 1)
+						else if (_patch.nextPatch.nextPatch.eccentricity < 1 && !double.IsNaN(_patch.nextPatch.nextPatch.period) && !double.IsInfinity(_patch.nextPatch.nextPatch.period))
 							nextPUT = _patch.nextPatch.nextPatch.StartUT + (_patch.nextPatch.nextPatch.period / 2);
 						else
 							nextPUT = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.EndUT - _patch.nextPatch.nextPatch.StartUT) / 2);
@@ -679,7 +687,7 @@ namespace BetterManeuvering
 
 						if (_patch.previousPatch.UTsoi > 0)
 							prevPUT = _patch.previousPatch.StartUT + ((_patch.previousPatch.UTsoi - _patch.previousPatch.StartUT) / 2);
-						else if (_patch.previousPatch.eccentricity < 1)
+						else if (_patch.previousPatch.eccentricity < 1 && !double.IsNaN(_patch.previousPatch.period) && !double.IsInfinity(_patch.previousPatch.period))
 							prevPUT = _patch.previousPatch.StartUT + (_patch.previousPatch.period / 2);
 						else
 							prevPUT = _patch.previousPatch.StartUT + ((_patch.previousPatch.EndUT - _patch.previousPatch.StartUT) / 2);
@@ -744,6 +752,9 @@ namespace BetterManeuvering
 
 		private void setNodeTime(double time)
 		{
+			if (double.IsNaN(time) || double.IsInfinity(time))
+				return;
+
 			if (_gizmo != null)
 			{
 				_gizmo.UT = time;
@@ -769,6 +780,9 @@ namespace BetterManeuvering
 			if (_patch == null || _patch.eccentricity >= 1)
 				return;
 
+			if (double.IsNaN(_patch.period) || double.IsInfinity(_patch.period))
+				return;
+
 			if (_gizmo != null)
 				_gizmo.orbitsAdded += 1;
 
@@ -780,6 +794,9 @@ namespace BetterManeuvering
 		private void previousOrbit()
 		{
 			if (_patch == null || _patch.eccentricity >= 1)
+				return;
+
+			if (double.IsNaN(_patch.period) || double.IsInfinity(_patch.period))
 				return;
 
 			double time = _node.UT - _patch.period;
@@ -812,7 +829,7 @@ namespace BetterManeuvering
 
 			if (_patch.nextPatch.nextPatch.UTsoi > 0)
 				time = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.UTsoi - _patch.nextPatch.nextPatch.StartUT) / 2);
-			else if (_patch.nextPatch.nextPatch.eccentricity < 1)
+			else if (_patch.nextPatch.nextPatch.eccentricity < 1 && !double.IsNaN(_patch.nextPatch.nextPatch.period) && !double.IsInfinity(_patch.nextPatch.nextPatch.period))
 				time = _patch.nextPatch.nextPatch.StartUT + (_patch.nextPatch.nextPatch.period / 2);
 			else
 				time = _patch.nextPatch.nextPatch.StartUT + ((_patch.nextPatch.nextPatch.EndUT - _patch.nextPatch.nextPatch.StartUT) / 2);
@@ -829,7 +846,7 @@ namespace BetterManeuvering
 
 			if (_patch.previousPatch.UTsoi > 0)
 				time = _patch.previousPatch.StartUT + ((_patch.previousPatch.UTsoi - _patch.previousPatch.StartUT) / 2);
-			else if (_patch.previousPatch.eccentricity < 1)
+			else if (_patch.previousPatch.eccentricity < 1 && !double.IsNaN(_patch.previousPatch.period) && !double.IsInfinity(_patch.previousPatch.period))
 				time = _patch.previousPatch.StartUT + (_patch.previousPatch.period / 2);
 			else
 				time = _patch.previousPatch.StartUT + ((_patch.previousPatch.EndUT - _patch.previousPatch.StartUT) / 2);
@@ -849,14 +866,20 @@ namespace BetterManeuvering
 			if (_patch.ApA > _patch.referenceBody.sphereOfInfluence)
 				return;
 			else
-				setNodeTime(_patch.StartUT + _patch.timeToAp + (_orbitsAdded * _patch.period));
+			{
+				double periods = 0;
+
+				if (!double.IsNaN(_patch.period) && !double.IsInfinity(_patch.period))
+					periods = (_orbitsAdded * _patch.period);
+
+				setNodeTime(_patch.StartUT + _patch.timeToAp + periods);
+			}
 		}
 
 		private void periapsis()
 		{
 			if (_patch == null || _patch.PeR < 0 || _patch.timeToPe < 0)
 				return;
-
 
 			if (_patch.timeToPe < 0)
 				return;
@@ -865,7 +888,14 @@ namespace BetterManeuvering
 			else if (_patch.UTsoi > 0 && _patch.timeToPe + _patch.StartUT > _patch.UTsoi)
 				return;
 			else
-				setNodeTime(_patch.StartUT + _patch.timeToPe + (_orbitsAdded * _patch.period));
+			{
+				double periods = 0;
+
+				if (!double.IsNaN(_patch.period) && !double.IsInfinity(_patch.period))
+					periods = (_orbitsAdded * _patch.period);
+
+				setNodeTime(_patch.StartUT + _patch.timeToPe + periods);
+			}
 		}
 
 		private void eqAsc()
@@ -880,7 +910,14 @@ namespace BetterManeuvering
 			else if (eqAsc < Planetarium.GetUniversalTime())
 				return;
 			else
-				setNodeTime(eqAsc + (_orbitsAdded * _patch.period));
+			{
+				double periods = 0;
+
+				if (!double.IsNaN(_patch.period) && !double.IsInfinity(_patch.period))
+					periods = (_orbitsAdded * _patch.period);
+
+				setNodeTime(eqAsc + periods);
+			}
 		}
 
 		private void eqDesc()
@@ -895,7 +932,14 @@ namespace BetterManeuvering
 			else if (eqDesc < Planetarium.GetUniversalTime())
 				return;
 			else
-				setNodeTime(eqDesc + (_orbitsAdded * _patch.period));
+			{
+				double periods = 0;
+
+				if (!double.IsNaN(_patch.period) && !double.IsInfinity(_patch.period))
+					periods = (_orbitsAdded * _patch.period);
+
+				setNodeTime(eqDesc + periods);
+			}
 		}
 
 		private void relAsc()
@@ -918,7 +962,14 @@ namespace BetterManeuvering
 			else if (relAsc < Planetarium.GetUniversalTime())
 				return;
 			else
-				setNodeTime(relAsc + (_orbitsAdded * _patch.period));
+			{
+				double periods = 0;
+
+				if (!double.IsNaN(_patch.period) && !double.IsInfinity(_patch.period))
+					periods = (_orbitsAdded * _patch.period);
+
+				setNodeTime(relAsc + periods);
+			}
 		}
 
 		private void relDesc()
@@ -941,7 +992,14 @@ namespace BetterManeuvering
 			else if (relDesc < Planetarium.GetUniversalTime())
 				return;
 			else
-				setNodeTime(relDesc + (_orbitsAdded * _patch.period));
+			{
+				double periods = 0;
+
+				if (!double.IsNaN(_patch.period) && !double.IsInfinity(_patch.period))
+					periods = (_orbitsAdded * _patch.period);
+
+				setNodeTime(relDesc + periods);
+			}
 		}
 
 		private void clApp()
@@ -978,7 +1036,7 @@ namespace BetterManeuvering
 
 			if (_patch.patchStartTransition == Orbit.PatchTransitionType.INITIAL && _patch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
 			{
-				if (time < (Planetarium.GetUniversalTime() + (_orbitsAdded * _patch.period)))
+				if (!double.IsNaN(_patch.period) && !double.IsInfinity(_patch.period) && time < (Planetarium.GetUniversalTime() + (_orbitsAdded * _patch.period)))
 					time += _patch.period;
 
 				setNodeTime(time);
@@ -994,7 +1052,7 @@ namespace BetterManeuvering
 			if (_patch.UTsoi > 0 && _patch.UTsoi - 1 <= time)
 				return;
 
-			if (_patch.patchStartTransition == Orbit.PatchTransitionType.INITIAL && _patch.patchEndTransition == Orbit.PatchTransitionType.FINAL && time >= (Planetarium.GetUniversalTime() + ((_orbitsAdded + 1) * _patch.period)))
+			if (!double.IsNaN(_patch.period) && !double.IsInfinity(_patch.period) && _patch.patchStartTransition == Orbit.PatchTransitionType.INITIAL && _patch.patchEndTransition == Orbit.PatchTransitionType.FINAL && time >= (Planetarium.GetUniversalTime() + ((_orbitsAdded + 1) * _patch.period)))
 				time -= _patch.period;
 
 			setNodeTime(time);
@@ -1031,7 +1089,7 @@ namespace BetterManeuvering
 
 			setNodeTime(_startUT);
 
-			if (_patch.eccentricity < 1 && _patch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
+			if (!double.IsNaN(_patch.period) && !double.IsInfinity(_patch.period) && _patch.eccentricity < 1 && _patch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
 				_orbitsAdded = (int)((_startUT - _patch.StartUT) / _patch.period);
 		}
 	}

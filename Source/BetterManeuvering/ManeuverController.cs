@@ -389,13 +389,13 @@ namespace BetterManeuvering
 			double minAnomalyTime = refPatch.GetUTforTrueAnomaly((trueAnomaly - settings.selectionTolerance < -180 ? trueAnomaly - settings.selectionTolerance + 360 : trueAnomaly - settings.selectionTolerance) * Mathf.Deg2Rad, 0);
 			double maxAnomalyTime = refPatch.GetUTforTrueAnomaly((trueAnomaly + settings.selectionTolerance > 180 ? trueAnomaly + settings.selectionTolerance - 360 : trueAnomaly + settings.selectionTolerance) * Mathf.Deg2Rad, 0);
 
-			if (minAnomalyTime > UT && refPatch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
+			if (minAnomalyTime > UT && !double.IsNaN(refPatch.period) && !double.IsInfinity(refPatch.period) && refPatch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
 				minAnomalyTime -= refPatch.period;
 
 			double minAnomalyTimeWide = refPatch.GetUTforTrueAnomaly((trueAnomaly - (settings.selectionTolerance + 5) < -180 ? trueAnomaly - (settings.selectionTolerance + 5) + 360 : trueAnomaly - (settings.selectionTolerance + 5)) * Mathf.Deg2Rad, 0);
 			double maxAnomalyTimeWide = refPatch.GetUTforTrueAnomaly((trueAnomaly + (settings.selectionTolerance + 5) > 180 ? trueAnomaly + (settings.selectionTolerance + 5) - 360 : trueAnomaly + (settings.selectionTolerance + 5)) * Mathf.Deg2Rad, 0);
 
-			if (minAnomalyTimeWide > UT && refPatch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
+			if (minAnomalyTimeWide > UT && !double.IsNaN(refPatch.period) && !double.IsInfinity(refPatch.period) && refPatch.patchEndTransition == Orbit.PatchTransitionType.FINAL)
 				minAnomalyTimeWide -= refPatch.period;
 
 			//maneuverLog("UT: {0:F2} - TA: {1:F2} - MinTA: {2:F2} - MinTAUT: {3:F2} - MaxTA: {4:F2} - MaxTAUT: {5:F2}", logLevels.log, UT, trueAnomaly,  trueAnomaly - 10 < -180 ? trueAnomaly - 10 + 360 : trueAnomaly - 10, minAnomalyTime, trueAnomaly + 10 > 180 ? trueAnomaly + 10 - 360 : trueAnomaly + 10, maxAnomalyTime);
@@ -642,14 +642,14 @@ namespace BetterManeuvering
 					continue;
 
 				snapPanel = snap;
-				snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex, false);
+				snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex, false, settings.showWindowLines);
 				snapPanels.Remove(snap);
 				return;
 			}
 
 			snapPanel = gameObject.AddComponent<ManeuverSnapPanel>();
 
-			snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex, settings.rememberManualInput);
+			snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex, settings.rememberManualInput, settings.showWindowLines);
 		}
 
 		private void attachNewInputButton()
@@ -665,14 +665,14 @@ namespace BetterManeuvering
 					continue;
 
 				inputPanel = input;
-				inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, false);
+				inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, false, settings.showWindowLines);
 				inputPanels.Remove(input);
 				return;
 			}
 
 			inputPanel = gameObject.AddComponent<ManeuverInputPanel>();
 
-			inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, settings.rememberManualInput);
+			inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, settings.rememberManualInput, settings.showWindowLines);
 		}
 
 		private void attachCycleButtons()

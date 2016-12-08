@@ -175,10 +175,15 @@ namespace BetterManeuvering
 
 		public static double EqAscTime(Orbit o)
 		{
-			double eqAsc = o.GetDTforTrueAnomaly((360 - o.argumentOfPeriapsis) * Mathf.Deg2Rad, o.period);
+			double period = 0;
+
+			if (!double.IsNaN(o.period) && !double.IsInfinity(o.period))
+				period = o.period;
+
+			double eqAsc = o.GetDTforTrueAnomaly((360 - o.argumentOfPeriapsis) * Mathf.Deg2Rad, period);
 
 			if (eqAsc < 0)
-				eqAsc += o.period;
+				eqAsc += period;
 
 			return eqAsc + o.StartUT;
 		}
@@ -206,10 +211,15 @@ namespace BetterManeuvering
 
 		public static double EqDescTime(Orbit o)
 		{
-			double eqDesc = o.GetDTforTrueAnomaly((180 - o.argumentOfPeriapsis) * Mathf.Deg2Rad, o.period);
+			double period = 0;
+
+			if (!double.IsNaN(o.period) && !double.IsInfinity(o.period))
+				period = o.period;
+
+			double eqDesc = o.GetDTforTrueAnomaly((180 - o.argumentOfPeriapsis) * Mathf.Deg2Rad, period);
 
 			if (eqDesc < 0)
-				eqDesc += o.period;
+				eqDesc += period;
 
 			return eqDesc + o.StartUT;
 		}
@@ -235,10 +245,15 @@ namespace BetterManeuvering
 
 			double anomaly = o.GetTrueAnomalyOfZupVector(node);
 
-			double relAsc = o.GetDTforTrueAnomaly(anomaly, o.period);
+			double period = 0;
+
+			if (!double.IsNaN(o.period) && !double.IsInfinity(o.period))
+				period = o.period;
+
+			double relAsc = o.GetDTforTrueAnomaly(anomaly, period);
 
 			if (relAsc < 0)
-				relAsc += o.period;
+				relAsc += period;
 
 			return relAsc + o.StartUT;
 		}
@@ -264,10 +279,15 @@ namespace BetterManeuvering
 
 			double anomaly = o.GetTrueAnomalyOfZupVector(node);
 
-			double relDesc = o.GetDTforTrueAnomaly(anomaly, o.period);
+			double period = 0;
+
+			if (!double.IsNaN(o.period) && !double.IsInfinity(o.period))
+				period = o.period;
+
+			double relDesc = o.GetDTforTrueAnomaly(anomaly, period);
 
 			if (relDesc < 0)
-				relDesc += o.period;
+				relDesc += period;
 
 			return relDesc + o.StartUT;
 		}
