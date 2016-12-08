@@ -54,6 +54,8 @@ namespace BetterManeuvering
 		[Persistent]
 		public bool rightClickClose = false;
 		[Persistent]
+		public bool showWindowLines = true;
+		[Persistent]
 		public bool rememberManualInput = true;
 		[Persistent]
 		public bool showManeuverCycle = true;
@@ -110,6 +112,7 @@ namespace BetterManeuvering
 				accuracy = settings.accuracy;
 				replaceGizmoButtons = settings.replaceGizmoButtons;
 				rightClickClose = settings.rightClickClose;
+				showWindowLines = settings.showWindowLines;
 				rememberManualInput = settings.rememberManualInput;
 				showManeuverCycle = settings.showManeuverCycle;
 				useKeyboard = settings.useKeyboard;

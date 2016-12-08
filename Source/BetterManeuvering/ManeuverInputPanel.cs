@@ -40,6 +40,7 @@ namespace BetterManeuvering
 		private int _index;
 		private bool _locked;
 		private bool _hover;
+		private bool _showLines;
 
 		private ManeuverInput _inputPanel;
 
@@ -114,7 +115,7 @@ namespace BetterManeuvering
 			get { return _node; }
 		}
 
-		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i, bool replace)
+		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i, bool replace, bool lines)
 		{
 			if (node == null)
 				return;
@@ -122,6 +123,7 @@ namespace BetterManeuvering
 			_node = node;
 			_gizmo = gizmo;
 			_index = i;
+			_showLines = lines;
 
 			if (replace)
 			{
@@ -215,7 +217,8 @@ namespace BetterManeuvering
 
 				reposition();
 
-				attachPointer();
+				if (_showLines)
+					attachPointer();
 
 				UpdateIncrements();
 

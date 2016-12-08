@@ -47,6 +47,8 @@ namespace BetterManeuvering
 		public bool rightClickClose = false;
 		[GameParameters.CustomParameterUI("Remember Manual Input Values", toolTip = "New manual DeltaV input windows will always use the last-used DeltaV increment values", autoPersistance = true)]
 		public bool rememberManualInput = true;
+		[GameParameters.CustomParameterUI("Show Window Lines", toolTip = "Toggle the lines connecting the windows to the buttons", autoPersistance = true)]
+		public bool showWindowLines = true;
 		[GameParameters.CustomParameterUI("Show Next/Previous Maneuver Node Buttons", toolTip = "Show buttons to cycle through multiple maneuver nodes on the maneuver button circle", autoPersistance = true)]
 		public bool showManeuverCycle = true;
 		[GameParameters.CustomParameterUI("Use Maneuver Node Keyboard Shortcut", toolTip = "Shortcut for opening/closing the currently focused node, the last opened node, or the first node", autoPersistance = true)]
@@ -69,6 +71,7 @@ namespace BetterManeuvering
 				accuracy = ManeuverPersistence.Instance.accuracy;
 				replaceGizmoButtons = ManeuverPersistence.Instance.replaceGizmoButtons;
 				rightClickClose = ManeuverPersistence.Instance.rightClickClose;
+				showWindowLines = ManeuverPersistence.Instance.showWindowLines;
 				rememberManualInput = ManeuverPersistence.Instance.rememberManualInput;
 				showManeuverCycle = ManeuverPersistence.Instance.showManeuverCycle;
 				useKeyboard = ManeuverPersistence.Instance.useKeyboard;
@@ -112,7 +115,10 @@ namespace BetterManeuvering
 				return replaceGizmoButtons;
 
 			if (member.Name == "rightClickClose")
-				return replaceGizmoButtons;			
+				return replaceGizmoButtons;
+
+			if (member.Name == "showWindowLines")
+				return replaceGizmoButtons;
 
 			return true;
 		}
