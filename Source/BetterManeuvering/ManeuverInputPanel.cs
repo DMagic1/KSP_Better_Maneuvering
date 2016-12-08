@@ -61,11 +61,6 @@ namespace BetterManeuvering
 		private RectTransform _buttonRect;
 		private RectTransform _panelRect;
 
-		private void Awake()
-		{
-
-		}
-
 		private void Update()
 		{
 			if (!_isVisible)
