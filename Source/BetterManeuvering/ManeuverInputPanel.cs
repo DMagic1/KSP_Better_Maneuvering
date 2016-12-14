@@ -295,7 +295,7 @@ namespace BetterManeuvering
 			cam.y -= (Screen.height / 2);
 
 			cam.x -= 275;
-			cam.y -= 50;
+			cam.y += 50;
 
 			_panelRect.position = cam;
 

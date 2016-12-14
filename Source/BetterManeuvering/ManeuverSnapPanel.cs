@@ -308,7 +308,7 @@ namespace BetterManeuvering
 			cam.y -= (Screen.height / 2);
 
 			cam.x += 75;
-			cam.y -= ((_panelRect.sizeDelta.y / 2) + 50);
+			cam.y -= ((_panelRect.sizeDelta.y / 2) - 50);
 
 			_panelRect.position = cam;
 
@@ -409,9 +409,9 @@ namespace BetterManeuvering
 
 				_orbitsAdded = 0;
 
-				_snapPanel.Apo.SetActive(false);
 				_snapPanel.NextOrbit.SetActive(false);
 				_snapPanel.PreviousOrbit.SetActive(false);
+				_snapPanel.Apo.SetActive(false);
 
 				if (_patch.timeToPe < 0)
 					_snapPanel.Peri.SetActive(false);
@@ -424,24 +424,6 @@ namespace BetterManeuvering
 					_snapPanel.Peri.SetActive(true);
 					periUT = _patch.StartUT + _patch.timeToPe;
 				}
-
-				eqAscUT = ManeuverUtilities.EqAscTime(_patch);
-
-				if (_patch.UTsoi > 0 && eqAscUT > _patch.UTsoi)
-					_snapPanel.EqAsc.SetActive(false);
-				else if (eqAscUT < UT)
-					_snapPanel.EqAsc.SetActive(false);
-				else
-					_snapPanel.EqAsc.SetActive(true);
-
-				eqDescUT = ManeuverUtilities.EqDescTime(_patch);
-
-				if (_patch.UTsoi > 0 && eqDescUT > _patch.UTsoi)
-					_snapPanel.EqDesc.SetActive(false);
-				else if (eqDescUT < UT)
-					_snapPanel.EqDesc.SetActive(false);
-				else
-					_snapPanel.EqDesc.SetActive(true);
 
 				if ((_patch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE || _patch.patchEndTransition == Orbit.PatchTransitionType.MANEUVER)
 					&& (_patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE))
@@ -471,6 +453,24 @@ namespace BetterManeuvering
 					else
 						prevPUT = _patch.previousPatch.StartUT + ((_patch.previousPatch.EndUT - _patch.previousPatch.StartUT) / 2);
 				}
+
+				eqAscUT = ManeuverUtilities.EqAscTime(_patch);
+
+				if (_patch.UTsoi > 0 && eqAscUT > _patch.UTsoi)
+					_snapPanel.EqAsc.SetActive(false);
+				else if (eqAscUT < UT)
+					_snapPanel.EqAsc.SetActive(false);
+				else
+					_snapPanel.EqAsc.SetActive(true);
+
+				eqDescUT = ManeuverUtilities.EqDescTime(_patch);
+
+				if (_patch.UTsoi > 0 && eqDescUT > _patch.UTsoi)
+					_snapPanel.EqDesc.SetActive(false);
+				else if (eqDescUT < UT)
+					_snapPanel.EqDesc.SetActive(false);
+				else
+					_snapPanel.EqDesc.SetActive(true);
 
 				ITargetable target = FlightGlobals.fetch.VesselTarget;
 
@@ -538,18 +538,6 @@ namespace BetterManeuvering
 					else
 						_snapPanel.NextOrbit.SetActive(false);
 
-					_snapPanel.Apo.SetActive(true);
-					apoUT = _patch.StartUT + _patch.timeToAp;
-
-					_snapPanel.Peri.SetActive(true);
-					periUT = _patch.StartUT + _patch.timeToPe;
-
-					_snapPanel.EqAsc.SetActive(true);
-					eqAscUT = ManeuverUtilities.EqAscTime(_patch);
-
-					_snapPanel.EqDesc.SetActive(true);
-					eqDescUT = ManeuverUtilities.EqDescTime(_patch);
-
 					if (double.IsNaN(_patch.period) || double.IsInfinity(_patch.period) || _node.UT - _patch.period < UT)
 						_snapPanel.PreviousOrbit.SetActive(false);
 					else
@@ -557,6 +545,12 @@ namespace BetterManeuvering
 						_snapPanel.PreviousOrbit.SetActive(true);
 						prevOUT = _node.UT - _patch.period;
 					}
+
+					_snapPanel.Apo.SetActive(true);
+					apoUT = _patch.StartUT + _patch.timeToAp;
+
+					_snapPanel.Peri.SetActive(true);
+					periUT = _patch.StartUT + _patch.timeToPe;
 
 					_snapPanel.NextPatch.SetActive(false);
 
@@ -573,6 +567,12 @@ namespace BetterManeuvering
 						else
 							prevPUT = _patch.previousPatch.StartUT + ((_patch.previousPatch.EndUT - _patch.previousPatch.StartUT) / 2);
 					}
+
+					_snapPanel.EqAsc.SetActive(true);
+					eqAscUT = ManeuverUtilities.EqAscTime(_patch);
+
+					_snapPanel.EqDesc.SetActive(true);
+					eqDescUT = ManeuverUtilities.EqDescTime(_patch);
 
 					ITargetable target = FlightGlobals.fetch.VesselTarget;
 
@@ -646,24 +646,6 @@ namespace BetterManeuvering
 						periUT = _patch.StartUT + _patch.timeToPe;
 					}
 
-					eqAscUT = ManeuverUtilities.EqAscTime(_patch);
-
-					if (_patch.UTsoi > 0 && eqAscUT > _patch.UTsoi)
-						_snapPanel.EqAsc.SetActive(false);
-					else if (eqAscUT < UT)
-						_snapPanel.EqAsc.SetActive(false);
-					else
-						_snapPanel.EqAsc.SetActive(true);
-
-					eqDescUT = ManeuverUtilities.EqDescTime(_patch);
-
-					if (_patch.UTsoi > 0 && eqDescUT > _patch.UTsoi)
-						_snapPanel.EqDesc.SetActive(false);
-					else if (eqDescUT < UT)
-						_snapPanel.EqDesc.SetActive(false);
-					else
-						_snapPanel.EqDesc.SetActive(true);
-
 					if ((_patch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE || _patch.patchEndTransition == Orbit.PatchTransitionType.MANEUVER)
 						&& (_patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ENCOUNTER || _patch.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE))
 					{
@@ -692,6 +674,24 @@ namespace BetterManeuvering
 						else
 							prevPUT = _patch.previousPatch.StartUT + ((_patch.previousPatch.EndUT - _patch.previousPatch.StartUT) / 2);
 					}
+
+					eqAscUT = ManeuverUtilities.EqAscTime(_patch);
+
+					if (_patch.UTsoi > 0 && eqAscUT > _patch.UTsoi)
+						_snapPanel.EqAsc.SetActive(false);
+					else if (eqAscUT < UT)
+						_snapPanel.EqAsc.SetActive(false);
+					else
+						_snapPanel.EqAsc.SetActive(true);
+
+					eqDescUT = ManeuverUtilities.EqDescTime(_patch);
+
+					if (_patch.UTsoi > 0 && eqDescUT > _patch.UTsoi)
+						_snapPanel.EqDesc.SetActive(false);
+					else if (eqDescUT < UT)
+						_snapPanel.EqDesc.SetActive(false);
+					else
+						_snapPanel.EqDesc.SetActive(true);
 
 					ITargetable target = FlightGlobals.fetch.VesselTarget;
 
