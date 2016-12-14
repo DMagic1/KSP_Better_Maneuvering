@@ -29,11 +29,11 @@ namespace BetterManeuvering
 {
 	public class ManeuverGameParams : GameParameters.CustomParameterNode
 	{
-		[GameParameters.CustomFloatParameterUI("Base Gizmo Scale", toolTip = "The minimum scale for the maneuver node gizmo", minValue = 0.5f, maxValue = 2.5f, displayFormat = "P0", autoPersistance = true)]
+		[GameParameters.CustomFloatParameterUI("Base Gizmo Scale", toolTip = "The minimum scale for the maneuver node gizmo", asPercentage = true, minValue = 0.5f, maxValue = 2.5f, displayFormat = "N1", autoPersistance = true)]
 		public float baseScale = 1.25f;
 		[GameParameters.CustomParameterUI("Dynamic Gizmo Scaling", toolTip = "Scale the maneuver node gizmo with map zoom", autoPersistance = true)]
 		public bool dynamicScaling = true;
-		[GameParameters.CustomFloatParameterUI("Max Scale", toolTip = "The maximum scale for the maneuver node gizmo when using dynamic scaling", minValue = 1.5f, maxValue = 5f, displayFormat = "P0", autoPersistance = true)]
+		[GameParameters.CustomFloatParameterUI("Max Scale", toolTip = "The maximum scale for the maneuver node gizmo when using dynamic scaling", asPercentage = true, minValue = 1.5f, maxValue = 5f, displayFormat = "N1", autoPersistance = true)]
 		public float maxScale = 2.5f;
 		[GameParameters.CustomIntParameterUI("Orbit Selection Tolerance", toolTip = "Tolerance for assigning maneuver nodes to specific positions when clicking on the orbit path; in degrees of the orbital ellipse", minValue = 5, maxValue = 25, stepSize = 1, autoPersistance = true)]
 		public int selectionTolerance = 10;
