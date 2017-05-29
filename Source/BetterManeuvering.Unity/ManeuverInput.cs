@@ -48,9 +48,9 @@ namespace BetterManeuvering.Unity
 		public Button NormalIncUpButton = null;
 		public Button RadialIncDownButton = null;
 		public Button RadialIncUpButton = null;
-		public TextHandler ProgradeText = null;
-		public TextHandler NormalText = null;
-		public TextHandler RadialText = null;
+		public InputHandler ProgradeText = null;
+		public InputHandler NormalText = null;
+		public InputHandler RadialText = null;
 		public TextHandler ProIncrementText = null;
 		public TextHandler NormIncrementText = null;
 		public TextHandler RadIncrementText = null;
@@ -62,15 +62,33 @@ namespace BetterManeuvering.Unity
 		private Vector2 mouseStart;
 		private Vector3 windowStart;
 
+		public bool ControlsLocked;
+
 		public class OnDragEvent : UnityEvent<RectTransform> { }
 		public class OnMouseEvent : UnityEvent<bool> { }
+		public class OnInputEvent : UnityEvent<bool> { }
 
 		public OnDragEvent DragEvent = new OnDragEvent();
 		public OnMouseEvent MouseOverEvent = new OnMouseEvent();
+		public OnInputEvent InputMouseEvent = new OnInputEvent();
 
 		private void Awake()
 		{
 			rect = GetComponent<RectTransform>();
+		}
+
+		private void Update()
+		{
+			if (ControlsLocked)
+			{
+				if (ProgradeText != null && !ProgradeText.IsFocused
+					&& NormalText != null && !NormalText.IsFocused
+					&& RadialText != null && !RadialText.IsFocused)
+				{
+					ControlsLocked = false;
+					InputMouseEvent.Invoke(false);
+				}
+			}
 		}
 
 		private void OnDestroy()
@@ -106,6 +124,19 @@ namespace BetterManeuvering.Unity
 		public void OnPointerExit(PointerEventData eventData)
 		{
 			MouseOverEvent.Invoke(false);
+		}
+
+		public void OnInputClick(BaseEventData eventData)
+		{
+			if (!(eventData is PointerEventData))
+				return;
+			
+			if (((PointerEventData)eventData).button != PointerEventData.InputButton.Left)
+				return;
+
+			InputMouseEvent.Invoke(true);
+
+			ControlsLocked = true;
 		}
 	}
 }
