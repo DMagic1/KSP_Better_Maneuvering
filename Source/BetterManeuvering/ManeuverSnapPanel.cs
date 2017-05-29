@@ -31,11 +31,18 @@ using KSP.UI;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 
 namespace BetterManeuvering
 {
 	public class ManeuverSnapPanel : MonoBehaviour
 	{
+		public class OnMouseEnter : EventTrigger.TriggerEvent { }
+		public class OnMouseExit : EventTrigger.TriggerEvent { }
+
+		private OnMouseEnter MouseEnter = new OnMouseEnter();
+		private OnMouseExit MouseExit = new OnMouseExit();
+
 		private Orbit _patch;
 		private ManeuverNode _node;
 		private ManeuverGizmo _gizmo;
@@ -44,6 +51,7 @@ namespace BetterManeuvering
 		private bool _locked;
 		private bool _hover;
 		private bool _showLines;
+		private bool _stickyFlight;
 		private int _orbitsAdded;
 		private int _manualIncrement;
 		private double[] _allowedIncrements = new double[6] { 1, 10, 60, 100, 1000, 3600 };
@@ -69,11 +77,14 @@ namespace BetterManeuvering
 			if (!_isVisible)
 				return;
 
-			if (_gizmo == null && _locked)
+			if ((_gizmo == null && _locked))
 			{
 				if (_node == null || _node.scaledSpaceTarget == null)
 					DestroyImmediate(this);
 			}
+
+			if (!_stickyFlight && !MapView.MapIsEnabled)
+				DestroyImmediate(this);
 
 			if (Math.Abs(_oldDeltaV.magnitude - _node.DeltaV.magnitude) > 10)
 			{
@@ -93,7 +104,7 @@ namespace BetterManeuvering
 			if (_pointer == null)
 				return;
 
-			if (_hover || !_locked)
+			if ((_hover || !_locked) && MapView.MapIsEnabled)
 			{
 				if (!_pointer.gameObject.activeSelf)
 					_pointer.gameObject.SetActive(true);
@@ -128,7 +139,7 @@ namespace BetterManeuvering
 			get { return _node; }
 		}
 
-		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i, bool remember, bool lines)
+		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i, bool remember, bool lines, bool stickyFlight)
 		{
 			if (node == null)
 				return;
@@ -141,6 +152,7 @@ namespace BetterManeuvering
 			_index = i;
 			_orbitsAdded = _gizmo.orbitsAdded;
 			_showLines = lines;
+			_stickyFlight = stickyFlight;
 
 			if (remember)
 				_manualIncrement = _persManualIncrement;
@@ -165,6 +177,25 @@ namespace BetterManeuvering
 			_snapButton.onClick.RemoveAllListeners();
 			_snapButton.onClick.AddListener(new UnityAction(ToggleUI));
 			_snapButton.interactable = true;
+
+			EventTrigger events = _snapButton.gameObject.AddComponent<EventTrigger>();
+
+			events.triggers = new System.Collections.Generic.List<EventTrigger.Entry>();
+
+			events.triggers.Add(new EventTrigger.Entry() 
+				{ 
+					eventID = EventTriggerType.PointerEnter,
+					callback = MouseEnter
+				});
+
+			events.triggers.Add(new EventTrigger.Entry()
+				{
+					eventID = EventTriggerType.PointerExit,
+					callback = MouseExit
+				});
+
+			MouseEnter.AddListener(new UnityAction<UnityEngine.EventSystems.BaseEventData>(TriggerOnMouseEnter));
+			MouseExit.AddListener(new UnityAction<UnityEngine.EventSystems.BaseEventData>(TriggerOnMouseExit));
 
 			Selectable snapSelect = _snapButton.GetComponent<Selectable>();
 
@@ -195,6 +226,9 @@ namespace BetterManeuvering
 
 		public void ToggleUI()
 		{
+			if (_gizmo != null)
+				_gizmo.SetMouseOverGizmo(true);
+
 			if (_isVisible)
 			{
 				if (_snapPanel != null)
@@ -344,6 +378,18 @@ namespace BetterManeuvering
 				SetMouseOverGizmo(false);
 				DestroyImmediate(this);
 			}
+		}
+
+		public void TriggerOnMouseEnter(UnityEngine.EventSystems.BaseEventData eventData)
+		{
+			if (_gizmo != null && eventData is PointerEventData)
+				_gizmo.SetMouseOverGizmo(true);
+		}
+
+		public void TriggerOnMouseExit(UnityEngine.EventSystems.BaseEventData eventData)
+		{
+			if (_gizmo != null && eventData is PointerEventData)
+				_gizmo.SetMouseOverGizmo(false);
 		}
 
 		private void UpdateTimers()

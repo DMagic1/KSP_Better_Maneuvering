@@ -30,17 +30,27 @@ using KSP.UI;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 
 namespace BetterManeuvering
 {
 	public class ManeuverInputPanel : MonoBehaviour
 	{
+		private const string controlLock = "MNE_ControlLock";
+
+		public class OnMouseEnter : EventTrigger.TriggerEvent { }
+		public class OnMouseExit : EventTrigger.TriggerEvent { }
+
+		private OnMouseEnter MouseEnter = new OnMouseEnter();
+		private OnMouseExit MouseExit = new OnMouseExit();
+
 		private ManeuverNode _node;
 		private ManeuverGizmo _gizmo;
 		private int _index;
 		private bool _locked;
 		private bool _hover;
 		private bool _showLines;
+		private bool _stickyFlight;
 
 		private ManeuverInput _inputPanel;
 
@@ -72,10 +82,13 @@ namespace BetterManeuvering
 					DestroyImmediate(this);
 			}
 
+			if (!_stickyFlight && !MapView.MapIsEnabled)
+				DestroyImmediate(this);
+
 			if (_pointer == null)
 				return;
 
-			if (_hover || !_locked)
+			if ((_hover || !_locked) && MapView.MapIsEnabled)
 			{
 				if (!_pointer.gameObject.activeSelf)
 					_pointer.gameObject.SetActive(true);
@@ -87,6 +100,8 @@ namespace BetterManeuvering
 		private void OnDestroy()
 		{
 			ManeuverController.Instance.RemoveInputPanel(this);
+
+			InputLockManager.RemoveControlLock(controlLock);
 
 			if (_inputPanel != null)
 				Destroy(_inputPanel);
@@ -110,7 +125,7 @@ namespace BetterManeuvering
 			get { return _node; }
 		}
 
-		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i, bool replace, bool lines)
+		public void setup(ManeuverNode node, ManeuverGizmo gizmo, int i, bool replace, bool lines, bool stickyFlight)
 		{
 			if (node == null)
 				return;
@@ -119,6 +134,7 @@ namespace BetterManeuvering
 			_gizmo = gizmo;
 			_index = i;
 			_showLines = lines;
+			_stickyFlight = stickyFlight;
 
 			if (replace)
 			{
@@ -148,6 +164,25 @@ namespace BetterManeuvering
 			_inputButton.onClick.AddListener(new UnityAction(ToggleUI));
 			_inputButton.interactable = true;
 
+			EventTrigger events = _inputButton.gameObject.AddComponent<EventTrigger>();
+
+			events.triggers = new System.Collections.Generic.List<EventTrigger.Entry>();
+
+			events.triggers.Add(new EventTrigger.Entry()
+			{
+				eventID = EventTriggerType.PointerEnter,
+				callback = MouseEnter
+			});
+
+			events.triggers.Add(new EventTrigger.Entry()
+			{
+				eventID = EventTriggerType.PointerExit,
+				callback = MouseExit
+			});
+
+			MouseEnter.AddListener(new UnityAction<UnityEngine.EventSystems.BaseEventData>(TriggerOnMouseEnter));
+			MouseExit.AddListener(new UnityAction<UnityEngine.EventSystems.BaseEventData>(TriggerOnMouseExit));
+
 			Selectable inputSelect = _inputButton.GetComponent<Selectable>();
 
 			inputSelect.image.sprite = ManeuverLoader.InputButtonNormal;
@@ -170,10 +205,18 @@ namespace BetterManeuvering
 			if (!_isVisible)
 				return;
 
-			_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N2}m/s", _index + 1, _node.DeltaV.magnitude));
-			_inputPanel.ProgradeText.OnTextUpdate.Invoke(string.Format("Prograde: {0:N2}m/s", _node.DeltaV.z));
-			_inputPanel.NormalText.OnTextUpdate.Invoke(string.Format("Normal: {0:N2}m/s", _node.DeltaV.y));
-			_inputPanel.RadialText.OnTextUpdate.Invoke(string.Format("Radial: {0:N2}m/s", _node.DeltaV.x));
+			double magnitude = _node.DeltaV.magnitude;
+
+			if (magnitude < 100000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N2}m/s", _index + 1, magnitude));
+			else if (magnitude < 1000000000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}km/s", _index + 1, magnitude / 1000));
+			else
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N0}Mm/s", _index + 1, magnitude / 1000000));
+
+			_inputPanel.ProgradeText.OnTextUpdate.Invoke(string.Format("{0:F2}", _node.DeltaV.z));
+			_inputPanel.NormalText.OnTextUpdate.Invoke(string.Format("{0:F2}", _node.DeltaV.y));
+			_inputPanel.RadialText.OnTextUpdate.Invoke(string.Format("{0:F2}", _node.DeltaV.x));
 		}
 
 		public void CloseGizmo()
@@ -188,6 +231,9 @@ namespace BetterManeuvering
 
 		public void ToggleUI()
 		{
+			if (_gizmo != null)
+				_gizmo.SetMouseOverGizmo(true);
+
 			if (_isVisible)
 			{
 				if (_inputPanel != null)
@@ -197,6 +243,8 @@ namespace BetterManeuvering
 
 				if (_pointer != null)
 					_pointer.Terminate();
+
+				InputLockManager.RemoveControlLock(controlLock);
 
 				_locked = false;
 
@@ -272,14 +320,33 @@ namespace BetterManeuvering
 
 			_inputPanel.DragEvent.AddListener(new UnityAction<RectTransform>(clampToScreen));
 			_inputPanel.MouseOverEvent.AddListener(new UnityAction<bool>(SetMouseOverGizmo));
+			_inputPanel.InputMouseEvent.AddListener(new UnityAction<bool>(SetControlLocks));
 
 			_inputPanel.WindowToggle.onValueChanged.AddListener(new UnityAction<bool>(SetLockedMode));
 
-			_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N2}m/s", _index + 1, _node.DeltaV.magnitude));
-			_inputPanel.ResetText.OnTextUpdate.Invoke(string.Format("{0:N2}m/s", _startDeltaV.magnitude));
-			_inputPanel.ProgradeText.OnTextUpdate.Invoke(string.Format("Prograde: {0:N2}m/s", _node.DeltaV.z));
-			_inputPanel.NormalText.OnTextUpdate.Invoke(string.Format("Normal: {0:N2}m/s", _node.DeltaV.y));
-			_inputPanel.RadialText.OnTextUpdate.Invoke(string.Format("Radial: {0:N2}m/s", _node.DeltaV.x));
+			_inputPanel.ProgradeText.OnValueChange.AddListener(new UnityAction<string>(SetProgradeInput));
+			_inputPanel.NormalText.OnValueChange.AddListener(new UnityAction<string>(SetNormalInput));
+			_inputPanel.RadialText.OnValueChange.AddListener(new UnityAction<string>(SetRadialInput));
+
+			double magnitude = _node.DeltaV.magnitude;
+
+			if (magnitude < 100000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N2}m/s", _index + 1, magnitude));
+			else if (magnitude < 1000000000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}km/s", _index + 1, magnitude / 1000));
+			else
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}Mm/s", _index + 1, magnitude / 1000000));
+
+			double startMagnitude = _startDeltaV.magnitude;
+
+			if (startMagnitude < 100000)
+				_inputPanel.ResetText.OnTextUpdate.Invoke(string.Format("{0:N2}m/s", _index + 1, startMagnitude));
+			else
+				_inputPanel.ResetText.OnTextUpdate.Invoke(string.Format("{0:N1}km/s", _index + 1, startMagnitude / 1000));
+			
+			_inputPanel.ProgradeText.OnTextUpdate.Invoke(string.Format("{0:F2}", _node.DeltaV.z));
+			_inputPanel.NormalText.OnTextUpdate.Invoke(string.Format("{0:F2}", _node.DeltaV.y));
+			_inputPanel.RadialText.OnTextUpdate.Invoke(string.Format("{0:F2}", _node.DeltaV.x));
 		}
 
 		private void reposition()
@@ -326,6 +393,110 @@ namespace BetterManeuvering
 				SetMouseOverGizmo(false);
 				DestroyImmediate(this);
 			}
+		}
+
+		private void SetControlLocks(bool isOn)
+		{
+			if (isOn)
+				InputLockManager.SetControlLock(controlLock);
+			else
+				InputLockManager.RemoveControlLock(controlLock);
+		}
+
+		private void SetProgradeInput(string input)
+		{
+			float value = 0;
+
+			if (!float.TryParse(input, out value))
+				return;
+
+			if (_gizmo != null)
+			{
+				_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, _gizmo.DeltaV.y, value);
+				_node.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+			}
+			else
+			{
+				_node.DeltaV = new Vector3d(_node.DeltaV.x, _node.DeltaV.y, value);
+				_node.solver.UpdateFlightPlan();
+			}
+
+			double magnitude = _node.DeltaV.magnitude;
+			
+			if (magnitude < 100000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N2}m/s", _index + 1, magnitude));
+			else if (magnitude < 1000000000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}km/s", _index + 1, magnitude / 1000));
+			else
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}Mm/s", _index + 1, magnitude / 1000000));
+		}
+
+		private void SetNormalInput(string input)
+		{
+			float value = 0;
+
+			if (!float.TryParse(input, out value))
+				return;
+
+			if (_gizmo != null)
+			{
+				_gizmo.DeltaV = new Vector3d(_gizmo.DeltaV.x, value, _node.DeltaV.z);
+				_node.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+			}
+			else
+			{
+				_node.DeltaV = new Vector3d(_node.DeltaV.x, value, _node.DeltaV.z);
+				_node.solver.UpdateFlightPlan();
+			}
+
+			double magnitude = _node.DeltaV.magnitude;
+
+			if (magnitude < 100000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N2}m/s", _index + 1, magnitude));
+			else if (magnitude < 1000000000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}km/s", _index + 1, magnitude / 1000));
+			else
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}Mm/s", _index + 1, magnitude / 1000000));
+		}
+
+		private void SetRadialInput(string input)
+		{
+			float value = 0;
+
+			if (!float.TryParse(input, out value))
+				return;
+
+			if (_gizmo != null)
+			{
+				_gizmo.DeltaV = new Vector3d(value, _gizmo.DeltaV.y, _gizmo.DeltaV.z);
+				_node.OnGizmoUpdated(_gizmo.DeltaV, _node.UT);
+			}
+			else
+			{
+				_node.DeltaV = new Vector3d(value, _node.DeltaV.y, _gizmo.DeltaV.z);
+				_node.solver.UpdateFlightPlan();
+			}
+
+			double magnitude = _node.DeltaV.magnitude;
+
+			if (magnitude < 100000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N2}m/s", _index + 1, magnitude));
+			else if (magnitude < 1000000000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}km/s", _index + 1, magnitude / 1000));
+			else
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}Mm/s", _index + 1, magnitude / 1000000));
+		}
+
+		public void TriggerOnMouseEnter(UnityEngine.EventSystems.BaseEventData eventData)
+		{
+			if (_gizmo != null && eventData is PointerEventData)
+				_gizmo.SetMouseOverGizmo(true);
+		}
+
+		public void TriggerOnMouseExit(UnityEngine.EventSystems.BaseEventData eventData)
+		{
+			if (_gizmo != null && eventData is PointerEventData)
+				_gizmo.SetMouseOverGizmo(false);
 		}
 
 		private void ProgradeDown()
@@ -469,10 +640,18 @@ namespace BetterManeuvering
 				UpdateDeltaV();
 			}
 
-			_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node DeltaV: {0:N1}m/s", _node.DeltaV.magnitude));
-			_inputPanel.ProgradeText.OnTextUpdate.Invoke(string.Format("Prograde: {0:N1}m/s", _node.DeltaV.z));
-			_inputPanel.NormalText.OnTextUpdate.Invoke(string.Format("Normal: {0:N1}m/s", _node.DeltaV.y));
-			_inputPanel.RadialText.OnTextUpdate.Invoke(string.Format("Radial: {0:N1}m/s", _node.DeltaV.x));
+			double magnitude = _node.DeltaV.magnitude;
+
+			if (magnitude < 100000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N2}m/s", _index + 1, magnitude));
+			else if (magnitude < 1000000000)
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}km/s", _index + 1, magnitude / 1000));
+			else
+				_inputPanel.TotaldVText.OnTextUpdate.Invoke(string.Format("Maneuver Node #{0}: {1:N1}Mm/s", _index + 1, magnitude / 1000000));
+
+			_inputPanel.ProgradeText.OnTextUpdate.Invoke(string.Format("{0:F2}", _node.DeltaV.z));
+			_inputPanel.NormalText.OnTextUpdate.Invoke(string.Format("{0:F2}", _node.DeltaV.y));
+			_inputPanel.RadialText.OnTextUpdate.Invoke(string.Format("{0:F2}", _node.DeltaV.x));
 		}
 
 
