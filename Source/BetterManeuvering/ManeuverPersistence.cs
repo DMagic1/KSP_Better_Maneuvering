@@ -44,6 +44,8 @@ namespace BetterManeuvering
 		[Persistent]
 		public float maxScale = 2.5f;
 		[Persistent]
+		public bool forceOpen = true;
+		[Persistent]
 		public int selectionTolerance = 10;
 		[Persistent]
 		public bool alignToOrbit = true;
@@ -54,11 +56,15 @@ namespace BetterManeuvering
 		[Persistent]
 		public bool rightClickClose = false;
 		[Persistent]
+		public bool stickyOpenFlight = false;
+		[Persistent]
 		public bool showWindowLines = true;
 		[Persistent]
 		public bool rememberManualInput = true;
 		[Persistent]
 		public bool showManeuverCycle = true;
+		[Persistent]
+		public bool focusOnNextManeuver = true;
 		[Persistent]
 		public bool useKeyboard = true;
 		[Persistent]
@@ -87,6 +93,11 @@ namespace BetterManeuvering
 
 			if (Load())
 				ManeuverController.maneuverLog("Settings file loaded", logLevels.log);
+			else
+			{
+				if (Save())
+					ManeuverController.maneuverLog("New Settings file generated at:\n{0}", logLevels.log, fullPath);
+			}
 		}
 
 		private void OnDestroy()
@@ -107,14 +118,17 @@ namespace BetterManeuvering
 				dynamicScaling = settings.dynamicScaling;
 				baseScale = settings.baseScale;
 				maxScale = settings.maxScale;
+				forceOpen = settings.forceOpen;
 				selectionTolerance = settings.selectionTolerance;
 				alignToOrbit = settings.alignToOrbit;
 				accuracy = settings.accuracy;
 				replaceGizmoButtons = settings.replaceGizmoButtons;
 				rightClickClose = settings.rightClickClose;
+				stickyOpenFlight = settings.stickyOpenFlight;
 				showWindowLines = settings.showWindowLines;
 				rememberManualInput = settings.rememberManualInput;
 				showManeuverCycle = settings.showManeuverCycle;
+				focusOnNextManeuver = settings.focusOnNextManeuver;
 				useKeyboard = settings.useKeyboard;
 
 				if (Save())

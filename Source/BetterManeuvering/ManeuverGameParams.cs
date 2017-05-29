@@ -45,12 +45,18 @@ namespace BetterManeuvering
 		public bool replaceGizmoButtons = true;
 		[GameParameters.CustomParameterUI("Right Click To Close Maneuver Windows", toolTip = "Right click outside of any maneuver input window to close it when not locked", autoPersistance = true)]
 		public bool rightClickClose = false;
+		[GameParameters.CustomParameterUI("Pinned Windows Open In Flight View", toolTip = "Keep any pinned windows opened when closing map mode", autoPersistance = true)]
+		public bool stickyOpenFlight = false;
 		[GameParameters.CustomParameterUI("Remember Manual Input Values", toolTip = "New manual DeltaV input windows will always use the last-used DeltaV increment values", autoPersistance = true)]
 		public bool rememberManualInput = true;
 		[GameParameters.CustomParameterUI("Show Window Lines", toolTip = "Toggle the lines connecting the windows to the buttons", autoPersistance = true)]
 		public bool showWindowLines = true;
+		[GameParameters.CustomParameterUI("Force Maneuver Node Open", toolTip = "Forces the current maneuver node to stay open when clicking outside of the node", autoPersistance = true)]
+		public bool forceOpen = true;
 		[GameParameters.CustomParameterUI("Show Next/Previous Maneuver Node Buttons", toolTip = "Show buttons to cycle through multiple maneuver nodes on the maneuver button circle", autoPersistance = true)]
 		public bool showManeuverCycle = true;
+		[GameParameters.CustomParameterUI("Change Focus to New Maneuver Node", toolTip = "Change the camera focus when using the next/previous maneuver node buttons", autoPersistance = true)]
+		public bool focusOnNextManeuver = true;
 		[GameParameters.CustomParameterUI("Use Maneuver Node Keyboard Shortcut", toolTip = "Shortcut for opening/closing the currently focused node, the last opened node, or the first node", autoPersistance = true)]
 		public bool useKeyboard = true;
 		[GameParameters.CustomParameterUI("Use As Default", toolTip = "Save these settings to a file on disk to be used as defaults for newly created games", autoPersistance = false)]
@@ -66,14 +72,17 @@ namespace BetterManeuvering
 				dynamicScaling = ManeuverPersistence.Instance.dynamicScaling;
 				baseScale = ManeuverPersistence.Instance.baseScale;
 				maxScale = ManeuverPersistence.Instance.maxScale;
+				forceOpen = ManeuverPersistence.Instance.forceOpen;
 				selectionTolerance = ManeuverPersistence.Instance.selectionTolerance;
 				alignToOrbit = ManeuverPersistence.Instance.alignToOrbit;
 				accuracy = ManeuverPersistence.Instance.accuracy;
 				replaceGizmoButtons = ManeuverPersistence.Instance.replaceGizmoButtons;
 				rightClickClose = ManeuverPersistence.Instance.rightClickClose;
+				stickyOpenFlight = ManeuverPersistence.Instance.stickyOpenFlight;
 				showWindowLines = ManeuverPersistence.Instance.showWindowLines;
 				rememberManualInput = ManeuverPersistence.Instance.rememberManualInput;
 				showManeuverCycle = ManeuverPersistence.Instance.showManeuverCycle;
+				focusOnNextManeuver = ManeuverPersistence.Instance.focusOnNextManeuver;
 				useKeyboard = ManeuverPersistence.Instance.useKeyboard;
 			}
 		}
@@ -89,6 +98,11 @@ namespace BetterManeuvering
 		}
 
 		public override string Section
+		{
+			get { return "DMagic Mods"; }
+		}
+
+		public override string DisplaySection
 		{
 			get { return "DMagic Mods"; }
 		}
@@ -117,8 +131,14 @@ namespace BetterManeuvering
 			if (member.Name == "rightClickClose")
 				return replaceGizmoButtons;
 
+			if (member.Name == "stickyOpenFlight")
+				return replaceGizmoButtons;
+
 			if (member.Name == "showWindowLines")
 				return replaceGizmoButtons;
+
+			if (member.Name == "focusOnNextManeuver")
+				return showManeuverCycle;
 
 			return true;
 		}
