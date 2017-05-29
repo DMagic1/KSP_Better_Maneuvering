@@ -35,6 +35,8 @@ namespace BetterManeuvering
 	[KSPAddon(KSPAddon.Startup.Flight, false)]
 	public class ManeuverLoader : MonoBehaviour
 	{
+		private const string bundleName = "/better_maneuver_prefabs";
+
 		private static bool loaded;
 		private static bool TMPLoaded;
 		private static bool UILoaded;
@@ -72,10 +74,8 @@ namespace BetterManeuvering
 		private static Sprite ToggleHightlight;
 		private static Sprite ToggleActive;
 		private static Sprite ToggleInactive;
+		private static Sprite ToggleCheckmark;
 		
-		private static Sprite ToggleImage;
-		private static Color ToggleImageColor;
-
 		private static Sprite WindowBackground;
 		private static Color WindowColor;
 
@@ -192,13 +192,16 @@ namespace BetterManeuvering
 		private void Start()
 		{
 			if (loaded)
+			{
 				Destroy(gameObject);
+				return;
+			}
 
 			if (loadedPrefabs == null)
 			{
 				string path = KSPUtil.ApplicationRootPath + "GameData/ManeuverNodeEvolved/Resources";
 
-				AssetBundle prefabs = AssetBundle.LoadFromFile(path + "/better_maneuver_prefabs");
+				AssetBundle prefabs = AssetBundle.LoadFromFile(path + bundleName);
 
 				if (prefabs != null)
 					loadedPrefabs = prefabs.LoadAllAssets<GameObject>();
@@ -290,7 +293,10 @@ namespace BetterManeuvering
 					_snapPrefab = o;
 
 				if (o != null)
+				{
 					processTMP(o);
+					processInputFields(o);
+				}
 			}
 
 			TMPLoaded = true;
@@ -321,8 +327,8 @@ namespace BetterManeuvering
 			Color c = text.color;
 			int i = text.fontSize;
 			bool r = text.raycastTarget;
-			FontStyles sty = getStyle(text.fontStyle);
-			TextAlignmentOptions align = getAnchor(text.alignment);
+			FontStyles sty = TMPProUtil.FontStyle(text.fontStyle);
+			TextAlignmentOptions align = TMPProUtil.TextAlignment(text.alignment);
 			float spacing = text.lineSpacing;
 			GameObject obj = text.gameObject;
 
@@ -338,7 +344,7 @@ namespace BetterManeuvering
 			tmp.fontStyle = sty;
 			tmp.lineSpacing = spacing;
 
-			tmp.font = Resources.Load("Fonts/Calibri SDF", typeof(TMP_FontAsset)) as TMP_FontAsset;
+			tmp.font = UISkinManager.TMPFont;
 			tmp.fontSharedMaterial = Resources.Load("Fonts/Materials/Calibri Dropshadow", typeof(Material)) as Material;
 
 			tmp.enableWordWrapping = true;
@@ -346,50 +352,89 @@ namespace BetterManeuvering
 			tmp.richText = true;
 		}
 
-		private FontStyles getStyle(FontStyle style)
+		private static void processInputFields(GameObject obj)
 		{
-			switch (style)
-			{
-				case FontStyle.Normal:
-					return FontStyles.Normal;
-				case FontStyle.Bold:
-					return FontStyles.Bold;
-				case FontStyle.Italic:
-					return FontStyles.Italic;
-				case FontStyle.BoldAndItalic:
-					return FontStyles.Bold;
-				default:
-					return FontStyles.Normal;
-			}
+			InputHandler[] handlers = obj.GetComponentsInChildren<InputHandler>(true);
+
+			if (handlers == null)
+				return;
+
+			for (int i = 0; i < handlers.Length; i++)
+				TMPInputFromInput(handlers[i]);
 		}
 
-		private TextAlignmentOptions getAnchor(TextAnchor anchor)
+		private static void TMPInputFromInput(InputHandler handler)
 		{
-			switch (anchor)
-			{
-				case TextAnchor.UpperLeft:
-					return TextAlignmentOptions.TopLeft;
-				case TextAnchor.UpperCenter:
-					return TextAlignmentOptions.Top;
-				case TextAnchor.UpperRight:
-					return TextAlignmentOptions.TopRight;
-				case TextAnchor.MiddleLeft:
-					return TextAlignmentOptions.MidlineLeft;
-				case TextAnchor.MiddleCenter:
-					return TextAlignmentOptions.Midline;
-				case TextAnchor.MiddleRight:
-					return TextAlignmentOptions.MidlineRight;
-				case TextAnchor.LowerLeft:
-					return TextAlignmentOptions.BottomLeft;
-				case TextAnchor.LowerCenter:
-					return TextAlignmentOptions.Bottom;
-				case TextAnchor.LowerRight:
-					return TextAlignmentOptions.BottomRight;
-				default:
-					return TextAlignmentOptions.Center;
-			}
+			if (handler == null)
+				return;
+
+			InputField input = handler.GetComponent<InputField>();
+
+			if (input == null)
+				return;
+
+			int limit = input.characterLimit;
+			TMP_InputField.ContentType content = GetTMPContentType(input.contentType);
+			float caretBlinkRate = input.caretBlinkRate;
+			int caretWidth = input.caretWidth;
+			Color selectionColor = input.selectionColor;
+			GameObject obj = input.gameObject;
+
+			RectTransform viewport = handler.GetComponentInChildren<RectMask2D>().rectTransform;
+			ManeuverOrbitTextMeshProHolder textComponent = handler.GetComponentsInChildren<ManeuverOrbitTextMeshProHolder>()[0];
+
+			if (viewport == null || textComponent == null)
+				return;
+
+			MonoBehaviour.DestroyImmediate(input);
+
+			ManeuverTMPInputField tmp = obj.AddComponent<ManeuverTMPInputField>();
+
+			tmp.textViewport = viewport;
+			tmp.placeholder = null;
+			tmp.textComponent = textComponent;
+
+			tmp.characterLimit = limit;
+			tmp.contentType = content;
+			tmp.caretBlinkRate = caretBlinkRate;
+			tmp.caretWidth = caretWidth;
+			tmp.selectionColor = selectionColor;
+
+			tmp.readOnly = false;
+			tmp.shouldHideMobileInput = false;
+
+			tmp.fontAsset = UISkinManager.TMPFont;
 		}
 
+		private static TMP_InputField.ContentType GetTMPContentType(InputField.ContentType type)
+		{
+			switch (type)
+			{
+				case InputField.ContentType.Alphanumeric:
+					return TMP_InputField.ContentType.Alphanumeric;
+				case InputField.ContentType.Autocorrected:
+					return TMP_InputField.ContentType.Autocorrected;
+				case InputField.ContentType.Custom:
+					return TMP_InputField.ContentType.Custom;
+				case InputField.ContentType.DecimalNumber:
+					return TMP_InputField.ContentType.DecimalNumber;
+				case InputField.ContentType.EmailAddress:
+					return TMP_InputField.ContentType.EmailAddress;
+				case InputField.ContentType.IntegerNumber:
+					return TMP_InputField.ContentType.IntegerNumber;
+				case InputField.ContentType.Name:
+					return TMP_InputField.ContentType.Name;
+				case InputField.ContentType.Password:
+					return TMP_InputField.ContentType.Password;
+				case InputField.ContentType.Pin:
+					return TMP_InputField.ContentType.Pin;
+				case InputField.ContentType.Standard:
+					return TMP_InputField.ContentType.Standard;
+				default:
+					return TMP_InputField.ContentType.Standard;
+			}
+		}
+		
 		private void processUIPrefabs()
 		{
 			parseUIWindow();
@@ -436,11 +481,10 @@ namespace BetterManeuvering
 			ToggleActive = pinSelect.spriteState.pressedSprite;
 			ToggleInactive = pinSelect.spriteState.disabledSprite;
 
-			Image circle = pin.GetComponentsInChildren<Image>(true)[2];
+			Image checkmark = pin.GetComponentsInChildren<Image>(true)[1];
 
-			ToggleImage = circle.sprite;
-			ToggleImageColor = circle.color;
-			
+			ToggleCheckmark = checkmark.sprite;
+
 			Selectable button = buttonPrefab.button.GetComponent<Selectable>();
 
 			ButtonNormal = button.image.sprite;
@@ -477,7 +521,7 @@ namespace BetterManeuvering
 					style.setButton(ButtonNormal, ButtonHighlight, ButtonActive, ButtonInactive);
 					break;
 				case ManeuverStyle.ElementTypes.Toggle:
-					style.setToggle(ToggleNormal, ToggleHightlight, ToggleActive, ToggleInactive, ToggleImage, ToggleImageColor);
+					style.setToggle(ToggleNormal, ToggleCheckmark);
 					break;
 				default:
 					break;
