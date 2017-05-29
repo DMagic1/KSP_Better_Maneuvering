@@ -25,6 +25,7 @@ THE SOFTWARE.
 */
 #endregion
 
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
@@ -37,7 +38,6 @@ namespace BetterManeuvering
 	public class ManeuverMainMenu : MonoBehaviour
 	{
 		private MainMenu menu;
-		private Callback newGameTap;
 
 		private void Start()
 		{
@@ -46,15 +46,11 @@ namespace BetterManeuvering
 			if (menu == null)
 				return;
 
-			newGameTap = menu.newGameBtn.onTap;
-
-			menu.newGameBtn.onTap = new Callback(onTap);
+			menu.newGameBtn.onTap = (Callback)Delegate.Combine(menu.newGameBtn.onTap, new Callback(onTap));
 		}
 
 		private void onTap()
 		{
-			newGameTap.Invoke();
-
 			StartCoroutine(AddListener());
 		}
 
@@ -64,20 +60,10 @@ namespace BetterManeuvering
 
 			var buttons = GameObject.FindObjectsOfType<Button>();
 
-			for (int i = buttons.Length - 1; i >= 0; i--)
+			if (buttons.Length > 0)
 			{
-				Button button = buttons[i];
+				var button = buttons[buttons.Length - 1];
 
-				if (button == null)
-					continue;
-
-				TextMeshProUGUI tmp = button.GetComponentInChildren<TextMeshProUGUI>();
-
-				if (tmp == null)
-					continue;
-
-				if (tmp.text != "Start!")
-					continue;
 
 				button.onClick.AddListener(new UnityAction(onSettingsApply));
 			}
