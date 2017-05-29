@@ -30,6 +30,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using KSP.UI.Screens.Mapview.MapContextMenuOptions;
 
 namespace BetterManeuvering
@@ -37,6 +38,14 @@ namespace BetterManeuvering
 	[KSPAddon(KSPAddon.Startup.Flight, false)]
     public class ManeuverController : MonoBehaviour
     {
+		public class OnMouseEnter : EventTrigger.TriggerEvent { }
+		public class OnMouseExit : EventTrigger.TriggerEvent { }
+
+		private OnMouseEnter MouseEnter = new OnMouseEnter();
+		private OnMouseExit MouseExit = new OnMouseExit();
+
+		private bool ListenersAdded;
+
 		private static ManeuverController instance;
 
 		public static EventData<PopupDialog> onPopupSpawn = new EventData<PopupDialog>("onPopupSpawn");
@@ -219,18 +228,23 @@ namespace BetterManeuvering
 					{
 						if (PlanetariumCamera.fetch != null)
 						{
-							float distance = (PlanetariumCamera.Camera.transform.position - currentGizmo.transform.position).magnitude;
+							if (currentGizmo.screenSize > 0.1f || settings.forceOpen)
+							{
+								float distance = (PlanetariumCamera.Camera.transform.position - currentGizmo.transform.position).magnitude;
 
-							if (distance < 0)
-								distance = 0;
+								if (distance < 0)
+									distance = 0;
 
-							float lerp = 2 / (1 + Mathf.Exp((-1 * distance * 0.0001f)));
+								float lerp = 2 / (1 + Mathf.Exp((-1 * distance * 0.0001f)));
 
-							float scale = Mathf.Lerp(settings.baseScale, settings.maxScale < settings.baseScale ? settings.baseScale + 0.1f : settings.maxScale, lerp - 1);
+								float scale = Mathf.Lerp(settings.baseScale, settings.maxScale < settings.baseScale ? settings.baseScale + 0.1f : settings.maxScale, lerp - 1);
 
-							currentGizmo.screenSize = originalScale * scale;
+								currentGizmo.screenSize = originalScale * scale;
+							}
 						}
 					}
+					else if (settings.forceOpen)
+						currentGizmo.screenSize = originalScale * settings.baseScale;
 
 					if (settings.rightClickClose)
 					{
@@ -354,7 +368,7 @@ namespace BetterManeuvering
 			if (multi.Options.Length != 2)
 				return;
 
-			if (multi.Options[0].OptionText != "Add Maneuver")
+			if (multi.name != "MapContextMenu")
 				return;
 
 			if (!(multi.Options[0] is AddManeuver))
@@ -517,7 +531,7 @@ namespace BetterManeuvering
 
 				rect.position = new Vector3(rect.position.x, rect.position.y, -40);
 
-				MultiOptionDialog newMulti = new MultiOptionDialog("", multi.title, MapView.OrbitIconsTextSkinDef, multi.dialogRect, options.ToArray());
+				MultiOptionDialog newMulti = new MultiOptionDialog("ManeuverMenu", "", multi.title, MapView.OrbitIconsTextSkinDef, multi.dialogRect, options.ToArray());
 
 				for (int i = multi.Options.Length - 1; i >= 0; i--)
 					DestroyImmediate(multi.Options[i].uiItem);
@@ -642,14 +656,14 @@ namespace BetterManeuvering
 					continue;
 
 				snapPanel = snap;
-				snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex, false, settings.showWindowLines);
+				snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex, false, settings.showWindowLines, settings.stickyOpenFlight);
 				snapPanels.Remove(snap);
 				return;
 			}
 
 			snapPanel = gameObject.AddComponent<ManeuverSnapPanel>();
 
-			snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex, settings.rememberManualInput, settings.showWindowLines);
+			snapPanel.setup(currentNode, currentGizmo, lastManeuverIndex, settings.rememberManualInput, settings.showWindowLines, settings.stickyOpenFlight);
 		}
 
 		private void attachNewInputButton()
@@ -665,18 +679,21 @@ namespace BetterManeuvering
 					continue;
 
 				inputPanel = input;
-				inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, false, settings.showWindowLines);
+				inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, false, settings.showWindowLines, settings.stickyOpenFlight);
 				inputPanels.Remove(input);
 				return;
 			}
 
 			inputPanel = gameObject.AddComponent<ManeuverInputPanel>();
 
-			inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, settings.rememberManualInput, settings.showWindowLines);
+			inputPanel.setup(currentNode, currentGizmo, lastManeuverIndex, settings.rememberManualInput, settings.showWindowLines, settings.stickyOpenFlight);
 		}
 
 		private void attachCycleButtons()
 		{
+			if (currentGizmo == null)
+				return;
+
 			RectTransform deleteRect = currentGizmo.deleteBtn.GetComponent<RectTransform>();
 			deleteRect.anchoredPosition3D = new Vector3(0, deleteRect.anchoredPosition3D.y, deleteRect.anchoredPosition3D.z);
 			deleteRect.localScale = deleteRect.localScale * 0.8f;
@@ -726,6 +743,23 @@ namespace BetterManeuvering
 			oldRect.localScale = oldRect.localScale * 0.9f;
 			oldRect.anchoredPosition3D = new Vector3(oldRect.anchoredPosition3D.x - 4, oldRect.anchoredPosition3D.y - 4, oldRect.anchoredPosition3D.z);
 
+
+			EventTrigger events = cycleForwardButton.gameObject.AddComponent<EventTrigger>();
+
+			events.triggers = new System.Collections.Generic.List<EventTrigger.Entry>();
+
+			events.triggers.Add(new EventTrigger.Entry()
+			{
+				eventID = EventTriggerType.PointerEnter,
+				callback = MouseEnter
+			});
+
+			events.triggers.Add(new EventTrigger.Entry()
+			{
+				eventID = EventTriggerType.PointerExit,
+				callback = MouseExit
+			});
+
 			cycleBackButton = Instantiate<Button>(currentGizmo.minusOrbitbtn);
 
 			cycleBackButton.transform.SetParent(currentGizmo.minusOrbitbtn.transform.parent);
@@ -759,7 +793,42 @@ namespace BetterManeuvering
 			oldRect.localScale = oldRect.localScale * 0.9f;
 			oldRect.anchoredPosition3D = new Vector3(oldRect.anchoredPosition3D.x + 4, oldRect.anchoredPosition3D.y - 4, oldRect.anchoredPosition3D.z);
 
+			EventTrigger eventsBack = cycleBackButton.gameObject.AddComponent<EventTrigger>();
+
+			eventsBack.triggers = new System.Collections.Generic.List<EventTrigger.Entry>();
+
+			eventsBack.triggers.Add(new EventTrigger.Entry()
+			{
+				eventID = EventTriggerType.PointerEnter,
+				callback = MouseEnter
+			});
+
+			eventsBack.triggers.Add(new EventTrigger.Entry()
+			{
+				eventID = EventTriggerType.PointerExit,
+				callback = MouseExit
+			});
+
+			if (!ListenersAdded)
+			{
+				MouseEnter.AddListener(new UnityAction<UnityEngine.EventSystems.BaseEventData>(TriggerOnMouseEnter));
+				MouseExit.AddListener(new UnityAction<UnityEngine.EventSystems.BaseEventData>(TriggerOnMouseExit));
+				ListenersAdded = true;
+			}
+
 			updateCycleButtons();
+		}
+
+		public void TriggerOnMouseEnter(UnityEngine.EventSystems.BaseEventData eventData)
+		{
+			if (currentGizmo != null && eventData is PointerEventData)
+				currentGizmo.SetMouseOverGizmo(true);
+		}
+
+		public void TriggerOnMouseExit(UnityEngine.EventSystems.BaseEventData eventData)
+		{
+			if (currentGizmo != null && eventData is PointerEventData)
+				currentGizmo.SetMouseOverGizmo(false);
 		}
 
 		private void cycleForward()
@@ -809,10 +878,16 @@ namespace BetterManeuvering
 			pcr.solver.maneuverNodes[newIndex].AttachGizmo(MapView.ManeuverNodePrefab, pcr);
 
 			updateCycleButtons();
+
+			if (settings.focusOnNextManeuver)
+				MapView.MapCamera.SetTarget(pcr.solver.maneuverNodes[newIndex].scaledSpaceTarget);
 		}
 
 		private void cycleBackward()
 		{
+			if (currentGizmo != null)
+				currentGizmo.SetMouseOverGizmo(true);
+
 			if (pcr == null)
 				return;
 
@@ -858,6 +933,9 @@ namespace BetterManeuvering
 			pcr.solver.maneuverNodes[newIndex].AttachGizmo(MapView.ManeuverNodePrefab, pcr);
 			
 			updateCycleButtons();
+
+			if (settings.focusOnNextManeuver)
+				MapView.MapCamera.SetTarget(pcr.solver.maneuverNodes[newIndex].scaledSpaceTarget);
 		}
 
 		private void updateCycleButtons()
@@ -919,11 +997,28 @@ namespace BetterManeuvering
 			currentGizmo = null;
 			currentNode = null;
 
+
 			if (snapPanel != null)
-				Destroy(snapPanel);
+			{
+				if (snapPanel.Locked)
+				{
+					snapPanel.CloseGizmo();
+					snapPanels.Add(snapPanel);
+				}
+				else
+					Destroy(snapPanel);
+			}
 
 			if (inputPanel != null)
-				Destroy(inputPanel);
+			{
+				if (inputPanel.Locked)
+				{
+					inputPanel.CloseGizmo();
+					inputPanels.Add(inputPanel);
+				}
+				else
+					Destroy(inputPanel);
+			}
 
 			snapPanel = null;
 			inputPanel = null;
