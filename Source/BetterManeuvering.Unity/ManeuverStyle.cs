@@ -68,6 +68,18 @@ namespace BetterManeuvering.Unity
 			select.spriteState = spriteState;
 		}
 
+		private void setSelectable(Sprite normal)
+		{
+			Selectable select = GetComponent<Selectable>();
+
+			if (select == null)
+				return;
+
+			select.image.sprite = normal;
+			select.image.type = Image.Type.Sliced;
+			select.transition = Selectable.Transition.None;
+		}
+
 		public void setImage(Sprite sprite, Material mat, Color color)
 		{
 			Image image = GetComponent<Image>();
@@ -86,9 +98,9 @@ namespace BetterManeuvering.Unity
 			setSelectable(normal, highlight, active, inactive);
 		}
 
-		public void setToggle(Sprite normal, Sprite highlight, Sprite active, Sprite inactive, Sprite topImage, Color topColor)
+		public void setToggle(Sprite normal, Sprite checkmark)
 		{
-			setSelectable(normal, highlight, active, inactive);
+			setSelectable(normal);
 
 			Toggle toggle = GetComponent<Toggle>();
 
@@ -100,13 +112,8 @@ namespace BetterManeuvering.Unity
 			if (toggleImage == null)
 				return;
 
-			toggleImage.sprite = active;
+			toggleImage.sprite = checkmark;
 			toggleImage.type = Image.Type.Sliced;
-
-			Image top = GetComponentsInChildren<Image>(true)[2];
-
-			top.sprite = topImage;
-			top.color = topColor;
 		}
 
 	}
