@@ -64,7 +64,6 @@ namespace BetterManeuvering
 			{
 				var button = buttons[buttons.Length - 1];
 
-
 				button.onClick.AddListener(new UnityAction(onSettingsApply));
 			}
 		}
