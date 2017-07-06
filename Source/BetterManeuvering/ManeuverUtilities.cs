@@ -28,33 +28,40 @@ THE SOFTWARE.
 using System;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using KSP.Localization;
 
 namespace BetterManeuvering
 {
 	public static class ManeuverUtilities
 	{
+		private static string[] LocalizedTime = new string[5] { "#autoLOC_6002321",
+																"#autoLOC_6002320",
+																"#autoLOC_6002319",
+																"#autoLOC_6002318",
+																"#autoLOC_6002317" };
+
 		public static double parseTime(string s)
 		{
 			double UT = 0;
 
-			UT += parseTime(s, 'y') * KSPUtil.dateTimeFormatter.Year;
+			UT += parseTime(s, Localizer.Format(LocalizedTime[0])) * KSPUtil.dateTimeFormatter.Year;
 
-			UT += parseTime(s, 'd') * KSPUtil.dateTimeFormatter.Day;
+			UT += parseTime(s, Localizer.Format(LocalizedTime[1])) * KSPUtil.dateTimeFormatter.Day;
 
-			UT += parseTime(s, 'h') * 3600;
+			UT += parseTime(s, Localizer.Format(LocalizedTime[2])) * 3600;
 
-			UT += parseTime(s, 'm') * 60;
+			UT += parseTime(s, Localizer.Format(LocalizedTime[3])) * 60;
 
-			UT += parseTime(s, 's');
+			UT += parseTime(s, Localizer.Format(LocalizedTime[4]));
 
 			UT += Planetarium.GetUniversalTime();
 
 			return UT;
 		}
 
-		private static double parseTime(string s, char c)
+		private static double parseTime(string s, string t)
 		{
-			string literal = @"\d+(?=" + c + ")";
+			string literal = @"\d+(?=" + t + ")";
 
 			Regex time = new Regex(@literal);
 
