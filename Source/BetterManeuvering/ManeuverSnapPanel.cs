@@ -115,13 +115,14 @@ namespace BetterManeuvering
 
 		private void OnDestroy()
 		{
-			ManeuverController.Instance.RemoveSnapPanel(this);
-			
 			if (_snapPanel != null)
 				Destroy(_snapPanel);
 
 			if (_pointer != null)
 				_pointer.Terminate();
+
+			if (ManeuverController.Instance != null)
+				ManeuverController.Instance.RemoveSnapPanel(this);			
 		}
 
 		public bool Locked
@@ -280,19 +281,14 @@ namespace BetterManeuvering
 			if (ManeuverLoader.SnapPrefab == null)
 				return;
 
-			GameObject obj = Instantiate(ManeuverLoader.SnapPrefab);
-
-			if (obj == null)
-				return;
-
-			obj.transform.SetParent(UIMasterController.Instance.appCanvas.transform, false);
-
-			_snapPanel = obj.GetComponent<ManeuverSnap>();
+			_snapPanel = Instantiate(ManeuverLoader.SnapPrefab).GetComponent<ManeuverSnap>();
 
 			if (_snapPanel == null)
 				return;
 
-			obj.SetActive(true);
+			_snapPanel.transform.SetParent(UIMasterController.Instance.appCanvas.transform, false);
+
+			_snapPanel.gameObject.SetActive(true);
 		}
 
 		private void attachUI()

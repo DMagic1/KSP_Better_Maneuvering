@@ -99,15 +99,16 @@ namespace BetterManeuvering
 
 		private void OnDestroy()
 		{
-			ManeuverController.Instance.RemoveInputPanel(this);
-
-			InputLockManager.RemoveControlLock(controlLock);
-
 			if (_inputPanel != null)
 				Destroy(_inputPanel);
 
 			if (_pointer != null)
 				_pointer.Terminate();
+
+			if (ManeuverController.Instance != null)
+				ManeuverController.Instance.RemoveInputPanel(this);
+
+			InputLockManager.RemoveControlLock(controlLock);
 		}
 
 		public bool Locked
@@ -283,19 +284,14 @@ namespace BetterManeuvering
 			if (ManeuverLoader.InputPrefab == null)
 				return;
 
-			GameObject obj = GameObject.Instantiate(ManeuverLoader.InputPrefab);
-
-			if (obj == null)
-				return;
-
-			obj.transform.SetParent(UIMasterController.Instance.appCanvas.transform, false);
-
-			_inputPanel = obj.GetComponent<ManeuverInput>();
+			_inputPanel = Instantiate(ManeuverLoader.InputPrefab).GetComponent<ManeuverInput>();
 
 			if (_inputPanel == null)
 				return;
 
-			obj.SetActive(true);
+			_inputPanel.transform.SetParent(UIMasterController.Instance.appCanvas.transform, false);
+
+			_inputPanel.gameObject.SetActive(true);
 		}
 
 		private void attachUI()
