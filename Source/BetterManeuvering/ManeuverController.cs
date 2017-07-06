@@ -141,6 +141,35 @@ namespace BetterManeuvering
 		{
 			instance = null;
 
+			for (int i = snapPanels.Count - 1; i >= 0; i--)
+			{
+				ManeuverSnapPanel snap = snapPanels[i];
+
+				if (snap == null)
+					continue;
+
+				Destroy(snap);
+			}
+
+			for (int i = inputPanels.Count - 1; i >= 0; i--)
+			{
+				ManeuverInputPanel input = inputPanels[i];
+
+				if (input == null)
+					continue;
+
+				Destroy(input);
+			}
+
+			if (snapPanel != null)
+				Destroy(snapPanel);
+
+			if (inputPanel != null)
+				Destroy(inputPanel);
+
+			snapPanel = null;
+			inputPanel = null;
+
 			onPopupSpawn.Remove(popupSpawn);
 			onPopupDestroy.Remove(popupDestroy);
 			onGizmoSpawn.Remove(gizmoSpawn);
@@ -996,7 +1025,6 @@ namespace BetterManeuvering
 
 			currentGizmo = null;
 			currentNode = null;
-
 
 			if (snapPanel != null)
 			{
