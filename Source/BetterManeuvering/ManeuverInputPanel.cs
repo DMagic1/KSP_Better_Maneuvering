@@ -100,7 +100,7 @@ namespace BetterManeuvering
 		private void OnDestroy()
 		{
 			if (_inputPanel != null)
-				Destroy(_inputPanel);
+				Destroy(_inputPanel.gameObject);
 
 			if (_pointer != null)
 				_pointer.Terminate();
@@ -236,9 +236,11 @@ namespace BetterManeuvering
 				_gizmo.SetMouseOverGizmo(true);
 
 			if (_isVisible)
-			{
-				if (_inputPanel != null)
-					Destroy(_inputPanel);
+            {
+                _isVisible = false;
+
+                if (_inputPanel != null)
+					Destroy(_inputPanel.gameObject);
 
 				_inputPanel = null;
 
@@ -248,12 +250,15 @@ namespace BetterManeuvering
 				InputLockManager.RemoveControlLock(controlLock);
 
 				_locked = false;
-
-				_isVisible = false;
 			}
 			else
-			{
-				openUI();
+            {
+                _isVisible = true;
+                
+                if (_inputPanel != null)
+                    DestroyImmediate(_inputPanel.gameObject);
+                
+                openUI();
 
 				_startDeltaV = _node.DeltaV;
 
@@ -265,9 +270,7 @@ namespace BetterManeuvering
 					attachPointer();
 
 				UpdateIncrements();
-
-				_isVisible = true;
-			}
+            }
 		}
 
 		private void attachPointer()

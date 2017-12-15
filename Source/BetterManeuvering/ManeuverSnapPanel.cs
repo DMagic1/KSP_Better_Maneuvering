@@ -116,7 +116,7 @@ namespace BetterManeuvering
 		private void OnDestroy()
 		{
 			if (_snapPanel != null)
-				Destroy(_snapPanel);
+				Destroy(_snapPanel.gameObject);
 
 			if (_pointer != null)
 				_pointer.Terminate();
@@ -231,8 +231,10 @@ namespace BetterManeuvering
 				_gizmo.SetMouseOverGizmo(true);
 
 			if (_isVisible)
-			{
-				if (_snapPanel != null)
+            {
+                _isVisible = false;
+
+                if (_snapPanel != null)
 					Destroy(_snapPanel.gameObject);
 
 				_snapPanel = null;
@@ -241,12 +243,15 @@ namespace BetterManeuvering
 					_pointer.Terminate();
 
 				_locked = false;
-
-				_isVisible = false;
 			}
 			else
-			{
-				openUI();
+            {
+                _isVisible = true;
+
+                if (_snapPanel != null)
+                    DestroyImmediate(_snapPanel.gameObject);
+
+                openUI();
 
 				_startUT = _node.UT;
 
@@ -262,8 +267,6 @@ namespace BetterManeuvering
 
 				if (_showLines)
 					attachPointer();
-
-				_isVisible = true;
 			}
 		}
 
