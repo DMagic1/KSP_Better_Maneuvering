@@ -201,16 +201,16 @@ namespace BetterManeuvering
 								else if (pcr.solver.maneuverNodes.Count > lastManeuverIndex)
 								{
 									if (pcr.solver.maneuverNodes[lastManeuverIndex].attachedGizmo == null)
-									{
-										pcr.SetMouseOverGizmo(true);
+                                    {
+                                        pcr.SetMouseOverGizmo(true);
 										pcr.solver.maneuverNodes[lastManeuverIndex].AttachGizmo(MapView.ManeuverNodePrefab, pcr);
 									}
 								}
 								else
 								{
 									if (pcr.solver.maneuverNodes[0].attachedGizmo == null)
-									{
-										pcr.SetMouseOverGizmo(true);
+                                    {
+                                        pcr.SetMouseOverGizmo(true);
 										pcr.solver.maneuverNodes[0].AttachGizmo(MapView.ManeuverNodePrefab, pcr);
 									}
 								}
@@ -597,13 +597,13 @@ namespace BetterManeuvering
 		}
 
 		private void gizmoSpawn(ManeuverGizmo gizmo)
-		{
-			if (gizmo == null)
+        {
+            if (gizmo == null)
 				return;
 
 			if (currentGizmo != null)
-			{
-				if (snapPanel != null)
+            {
+                if (snapPanel != null)
 				{
 					if (snapPanel.Locked)
 					{
@@ -625,7 +625,10 @@ namespace BetterManeuvering
 						Destroy(inputPanel);
 				}
 
-				snapPanel = null;
+                currentGizmo.Terminate();
+                currentGizmo = null;
+
+                snapPanel = null;
 				inputPanel = null;
 			}
 
@@ -646,21 +649,21 @@ namespace BetterManeuvering
 				currentNode = node;
 				break;
 			}
+            
+            //RectTransform plusRect = currentGizmo.deleteBtn.GetComponent<RectTransform>();
+            //maneuverLog("Delete Button Rect Anchored: {0:F4}\nPosition: {1:F4}\nPivot: {2:F4}\nAnchor Min: {3:F4}\nAnchor Max: {4:F4}\nScale: {5:F4}\nRotation: {6:F4}\nLocal Rotation: {7:F4}\nSize: {8:F4}"
+            //, logLevels.log
+            //, plusRect.anchoredPosition3D
+            //, plusRect.position
+            //, plusRect.pivot
+            //, plusRect.anchorMin
+            //, plusRect.anchorMax
+            //, plusRect.localScale
+            //, plusRect.rotation.eulerAngles
+            //, plusRect.localRotation.eulerAngles
+            //, plusRect.sizeDelta);
 
-			//RectTransform plusRect = currentGizmo.deleteBtn.GetComponent<RectTransform>();
-			//maneuverLog("Delete Button Rect Anchored: {0:F4}\nPosition: {1:F4}\nPivot: {2:F4}\nAnchor Min: {3:F4}\nAnchor Max: {4:F4}\nScale: {5:F4}\nRotation: {6:F4}\nLocal Rotation: {7:F4}\nSize: {8:F4}"
-			//, logLevels.log
-			//, plusRect.anchoredPosition3D
-			//, plusRect.position
-			//, plusRect.pivot
-			//, plusRect.anchorMin
-			//, plusRect.anchorMax
-			//, plusRect.localScale
-			//, plusRect.rotation.eulerAngles
-			//, plusRect.localRotation.eulerAngles
-			//, plusRect.sizeDelta);
-
-			attachGizmoHandlers();
+            attachGizmoHandlers();
 
 			if (settings.showManeuverCycle)
 				attachCycleButtons();
