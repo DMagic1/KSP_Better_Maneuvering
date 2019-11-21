@@ -89,6 +89,11 @@ namespace BetterManeuvering
 		private List<ManeuverInputPanel> inputPanels = new List<ManeuverInputPanel>();
 		private List<ManeuverSnapPanel> snapPanels = new List<ManeuverSnapPanel>();
 
+        public int LastManeuverIndex
+        {
+            get { return lastManeuverIndex; }
+        }
+
 		public static ManeuverController Instance
 		{
 			get { return instance; }
@@ -103,22 +108,24 @@ namespace BetterManeuvering
 
 			if (ManeuverPersistence.Instance != null)
 				shortcut = ManeuverPersistence.Instance.keyboardShortcut;
+
 		}
 
 		private void Start()
 		{
+			settings = HighLogic.CurrentGame.Parameters.CustomParams<ManeuverGameParams>();
+
 			StartCoroutine(attachPopupListener());
 			StartCoroutine(attachGizmoListener());
 			StartCoroutine(startup());
+            StartCoroutine(waitforManeuverEditorManager());
 
-			onPopupSpawn.Add(popupSpawn);
+            onPopupSpawn.Add(popupSpawn);
 			onPopupDestroy.Add(popupDestroy);
 			onGizmoSpawn.Add(gizmoSpawn);
 			onGizmoDestroy.Add(gizmoDestroy);
 			GameEvents.onVesselChange.Add(onVesselChange);
 			GameEvents.OnGameSettingsApplied.Add(SettingsApplied);
-
-			settings = HighLogic.CurrentGame.Parameters.CustomParams<ManeuverGameParams>();
 
 			switch(settings.accuracy)
 			{
@@ -355,6 +362,46 @@ namespace BetterManeuvering
 
 			MapView.ManeuverNodePrefab.AddOrGetComponent<ManeuverGizmoListener>();
 		}
+
+        private IEnumerator waitforManeuverEditorManager()
+        {
+            if (!settings.useManeuverSnapTab)
+                yield break;
+
+            while (ManeuverNodeEditorManager.Instance == null)
+                yield return null;
+
+            //ManeuverNodeEditorManager.Instance.maneuverNodeEditorTabs.Add(ManeuverLoader.SnapTabPrefab.GetComponent<ManeuverSnapTab>());
+
+            while (!ManeuverNodeEditorManager.Instance.IsReady)
+                yield return null;
+
+            yield return null;
+
+            for (int i = ManeuverNodeEditorManager.Instance.LeftTabs.Count - 1; i >= 0; i--)
+            {
+                Destroy(ManeuverNodeEditorManager.Instance.LeftTabs[i].gameObject);
+                Destroy(ManeuverNodeEditorManager.Instance.GetTabToggle(i, ManeuverNodeEditorTabPosition.LEFT).gameObject);
+            }
+
+            for (int i = ManeuverNodeEditorManager.Instance.RightTabs.Count - 1; i >= 0; i--)
+            {
+                Destroy(ManeuverNodeEditorManager.Instance.RightTabs[i].gameObject);
+                Destroy(ManeuverNodeEditorManager.Instance.GetTabToggle(i, ManeuverNodeEditorTabPosition.RIGHT).gameObject);
+            }
+
+            ManeuverSnapTab tab = ManeuverLoader.SnapTabPrefab.GetComponent<ManeuverSnapTab>();
+
+            tab.SetTabValues();
+
+            ManeuverNodeEditorManager.addTab(tab);
+
+            if (ManeuverNodeEditorManager.Instance.RightTabs.Count > 0)
+                ManeuverNodeEditorManager.Instance.SetCurrentTab(0, ManeuverNodeEditorTabPosition.RIGHT);
+
+            if (ManeuverNodeEditorManager.Instance.LeftTabs.Count > 0)
+                ManeuverNodeEditorManager.Instance.SetCurrentTab(0, ManeuverNodeEditorTabPosition.LEFT);
+        }
 
 		public void SettingsApplied()
 		{
