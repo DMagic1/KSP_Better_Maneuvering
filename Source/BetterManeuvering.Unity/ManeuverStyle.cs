@@ -39,7 +39,12 @@ namespace BetterManeuvering.Unity
 			Box,
 			Button,
 			Toggle,
-			Input
+			Input,
+            TabBackground,
+            TabButtonBackground,
+            TabTextBackground,
+            ResetButton,
+            ScrollBar,
 		}
 
 		[SerializeField]
@@ -50,7 +55,7 @@ namespace BetterManeuvering.Unity
 			get { return m_ElementType; }
 		}
 
-		private void setSelectable(Sprite normal, Sprite highlight, Sprite active, Sprite inactive)
+		private void setSelectable(Sprite normal, Sprite highlight, Sprite active, Sprite inactive, Image.Type type)
 		{
 			Selectable select = GetComponent<Selectable>();
 
@@ -58,7 +63,7 @@ namespace BetterManeuvering.Unity
 				return;
 
 			select.image.sprite = normal;
-			select.image.type = Image.Type.Sliced;
+			select.image.type = type;
 			select.transition = Selectable.Transition.SpriteSwap;
 
 			SpriteState spriteState = select.spriteState;
@@ -93,9 +98,20 @@ namespace BetterManeuvering.Unity
 			image.type = Image.Type.Sliced;
 		}
 
-		public void setButton(Sprite normal, Sprite highlight, Sprite active, Sprite inactive)
+        public void setImage(Sprite sprite)
+        {
+            Image image = GetComponent<Image>();
+
+            if (image == null)
+                return;
+
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+        }
+
+        public void setButton(Sprite normal, Sprite highlight, Sprite active, Sprite inactive, Image.Type type = Image.Type.Sliced)
 		{
-			setSelectable(normal, highlight, active, inactive);
+			setSelectable(normal, highlight, active, inactive, type);
 		}
 
 		public void setToggle(Sprite normal, Sprite checkmark)
@@ -116,5 +132,29 @@ namespace BetterManeuvering.Unity
 			toggleImage.type = Image.Type.Sliced;
 		}
 
-	}
+        public void setScrollbar(Sprite background, Sprite thumb)
+        {
+            Image back = GetComponent<Image>();
+
+            if (back == null)
+                return;
+
+            back.sprite = background;
+
+            Scrollbar scroll = GetComponent<Scrollbar>();
+
+            if (scroll == null)
+                return;
+
+            if (scroll.targetGraphic == null)
+                return;
+
+            Image scrollThumb = scroll.targetGraphic.GetComponent<Image>();
+
+            if (scrollThumb == null)
+                return;
+
+            scrollThumb.sprite = thumb;
+        }
+    }
 }
