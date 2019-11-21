@@ -39,9 +39,9 @@ namespace BetterManeuvering
 		public float maxScale = 2.5f;
 		[GameParameters.CustomIntParameterUI("Orbit Selection Tolerance", toolTip = "Tolerance for assigning maneuver nodes to specific positions when clicking on the orbit path; in degrees of the orbital ellipse", minValue = 5, maxValue = 25, stepSize = 1, autoPersistance = true)]
 		public int selectionTolerance = 10;
-		[GameParameters.CustomParameterUI("Rotate Gizmo With Orbit", toolTip = "Align maneuver node gizmo handles and manual DeltaV input with the post-maneuver node orbit orientation", autoPersistance = true)]
+		[GameParameters.CustomParameterUI("Maneuver Effects Follow Orbit (Intuitive Mode)", toolTip = "Maneuver gizmo and manual deltaV inputs act according to the node's post-maneuver orientation (stock behavior follows the initial orbit orientation)", autoPersistance = true)]
 		public bool alignToOrbit = true;
-		[GameParameters.CustomIntParameterUI("Alignment Accuracy", minValue = 0, maxValue = 2, stepSize = 1, toolTip = "Accuracy vs performance tradeoff when the maneuver node is aligned to orbit", autoPersistance = true)]
+		[GameParameters.CustomIntParameterUI("Alignment Accuracy", minValue = 0, maxValue = 2, stepSize = 1, toolTip = "Accuracy vs performance tradeoff when the maneuver node is aligned to orbit (lower accuracy if you notice stuttering while pulling gizmo handles)", autoPersistance = true)]
 		public int accuracy = 2;
 		[GameParameters.CustomParameterUI("Replace Maneuver Gizmo Buttons", toolTip = "Use manual DeltaV input and maneuver reposition windows", autoPersistance = true)]
 		public bool replaceGizmoButtons = true;
