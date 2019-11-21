@@ -47,7 +47,9 @@ namespace BetterManeuvering
 		public bool forceOpen = true;
 		[Persistent]
 		public int selectionTolerance = 10;
-		[Persistent]
+        [Persistent]
+        public bool useManeuverTab = true;
+        [Persistent]
 		public bool alignToOrbit = true;
 		[Persistent]
 		public int accuracy = 2;
@@ -115,6 +117,7 @@ namespace BetterManeuvering
 
 			if (settings.useAsDefault)
 			{
+                useManeuverTab = settings.useManeuverSnapTab;
 				dynamicScaling = settings.dynamicScaling;
 				baseScale = settings.baseScale;
 				maxScale = settings.maxScale;

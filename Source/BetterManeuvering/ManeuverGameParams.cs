@@ -28,8 +28,10 @@ THE SOFTWARE.
 namespace BetterManeuvering
 {
 	public class ManeuverGameParams : GameParameters.CustomParameterNode
-	{
-		[GameParameters.CustomFloatParameterUI("Base Gizmo Scale", toolTip = "The minimum scale for the maneuver node gizmo", asPercentage = true, minValue = 0.5f, maxValue = 2.5f, displayFormat = "N1", autoPersistance = true)]
+    {
+        [GameParameters.CustomParameterUI("Add Maneuver Position Tab", toolTip = "Add an extra tab to the maneuver widget to control maneuver node position; requires scene reload", autoPersistance = true)]
+        public bool useManeuverSnapTab = true;
+        [GameParameters.CustomFloatParameterUI("Base Gizmo Scale", toolTip = "The minimum scale for the maneuver node gizmo", asPercentage = true, minValue = 0.5f, maxValue = 2.5f, displayFormat = "N1", autoPersistance = true)]
 		public float baseScale = 1.25f;
 		[GameParameters.CustomParameterUI("Dynamic Gizmo Scaling", toolTip = "Scale the maneuver node gizmo with map zoom", autoPersistance = true)]
 		public bool dynamicScaling = true;
@@ -69,6 +71,7 @@ namespace BetterManeuvering
 				if (ManeuverPersistence.Instance == null)
 					return;
 
+                useManeuverSnapTab = ManeuverPersistence.Instance.useManeuverTab;
 				dynamicScaling = ManeuverPersistence.Instance.dynamicScaling;
 				baseScale = ManeuverPersistence.Instance.baseScale;
 				maxScale = ManeuverPersistence.Instance.maxScale;
@@ -99,12 +102,12 @@ namespace BetterManeuvering
 
 		public override string Section
 		{
-			get { return "DMagic Mods"; }
+			get { return "Maneuver Node Evolved"; }
 		}
 
 		public override string DisplaySection
 		{
-			get { return "DMagic Mods"; }
+			get { return "Maneuver Node Evolved"; }
 		}
 
 		public override int SectionOrder
