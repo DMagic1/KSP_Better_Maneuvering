@@ -25,6 +25,7 @@ THE SOFTWARE.
 */
 #endregion
 
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -46,6 +47,7 @@ namespace BetterManeuvering
 
 		private static GameObject _inputPrefab;
 		private static GameObject _snapPrefab;
+        private static GameObject _snapTabPrefab;
 
 		private static Sprite _inputButtonNormal;
 		private static Sprite _inputButtonHighlight;
@@ -65,24 +67,36 @@ namespace BetterManeuvering
 		private static Sprite _prevButtonActive;
 		private static Sprite _prevButtonInactive;
 
-		private static Sprite ButtonNormal;
-		private static Sprite ButtonHighlight;
-		private static Sprite ButtonActive;
-		private static Sprite ButtonInactive;
+		private static Sprite _ButtonNormal;
+		private static Sprite _ButtonHighlight;
+		private static Sprite _ButtonActive;
+		private static Sprite _ButtonInactive;
 
-		private static Sprite ToggleNormal;
-		private static Sprite ToggleHightlight;
-		private static Sprite ToggleActive;
-		private static Sprite ToggleInactive;
-		private static Sprite ToggleCheckmark;
+		private static Sprite _ToggleNormal;
+		private static Sprite _ToggleHightlight;
+		private static Sprite _ToggleActive;
+		private static Sprite _ToggleInactive;
+		private static Sprite _ToggleCheckmark;
 		
-		private static Sprite WindowBackground;
-		private static Color WindowColor;
+		private static Sprite _WindowBackground;
+		private static Color _WindowColor;
 
-		private static Sprite TitleBackground;
-		private static Color TitleColor;
+		private static Sprite _TitleBackground;
+		private static Color _TitleColor;
 
-		private static Material UIMaterial;
+        private static Sprite _TabPanelBackground;
+        private static Sprite _TabButtonBackground;
+        private static Sprite _TabTextBackground;
+
+        private static Sprite _TabOrbitButtonNormal;
+        private static Sprite _TabOrbitButtonHighlight;
+        private static Sprite _TabOrbitButtonActive;
+        private static Sprite _TabOrbitButtonInactive;
+
+        private static Sprite _SnapPanelTabIconOn;
+        private static Sprite _SnapPanelTabIconOff;
+
+        private static Material UIMaterial;
 
 		private static Color _lineColor;
 		private static float _lineCornerRadius;
@@ -99,7 +113,12 @@ namespace BetterManeuvering
 			get { return _snapPrefab; }
 		}
 
-		public static Color LineColor
+        public static GameObject SnapTabPrefab
+        {
+            get { return _snapTabPrefab; }
+        }
+
+        public static Color LineColor
 		{
 			get { return _lineColor; }
 		}
@@ -189,12 +208,22 @@ namespace BetterManeuvering
 			get { return _prevButtonInactive; }
 		}
 
-		private void Start()
+        public static Sprite SnapPanelTabIconOn
+        {
+            get { return _SnapPanelTabIconOn; }
+        }
+
+        public static Sprite SnapPanelTabIconOff
+        {
+            get { return _SnapPanelTabIconOff; }
+        }
+
+        private IEnumerator Start()
 		{
 			if (loaded)
 			{
 				Destroy(gameObject);
-				return;
+				yield break;
 			}
 
 			if (loadedPrefabs == null)
@@ -212,7 +241,16 @@ namespace BetterManeuvering
 				if (!TMPLoaded)
 					processTMPPrefabs();
 
-				if (UIPartActionController.Instance != null && !UILoaded)
+                while (UIPartActionController.Instance == null)
+                    yield return null;
+
+                while (ManeuverNodeEditorManager.Instance == null)
+                    yield return null;
+
+                //while (!ManeuverNodeEditorManager.Instance.IsReady)
+                //    yield return null;
+
+                if (!UILoaded)
 					processUIPrefabs();
 			}
 
@@ -247,7 +285,10 @@ namespace BetterManeuvering
 			Texture2D prevActive = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Previous_Active", false);
 			Texture2D prevInactive = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/Previous_InActive", false);
 
-			if (inputNormal != null && inputHighlight != null && inputActive != null)
+            Texture2D snapOnIcon = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/SnapPanel_OnIcon", false);
+            Texture2D snapOffIcon = GameDatabase.Instance.GetTexture("ManeuverNodeEvolved/Resources/SnapPanel_OffIcon", false);
+
+            if (inputNormal != null && inputHighlight != null && inputActive != null)
 			{
 				_inputButtonNormal = Sprite.Create(inputNormal, new Rect(0, 0, inputNormal.width, inputNormal.height), new Vector2(0.5f, 0.5f));
 				_inputButtonHighlight = Sprite.Create(inputHighlight, new Rect(0, 0, inputHighlight.width, inputHighlight.height), new Vector2(0.5f, 0.5f));
@@ -277,7 +318,13 @@ namespace BetterManeuvering
 				_prevButtonInactive = Sprite.Create(prevInactive, new Rect(0, 0, snapActive.width, snapActive.height), new Vector2(0.5f, 0.5f));
 			}
 
-			if (_inputButtonNormal != null && _inputButtonHighlight != null && _inputButtonActive != null && _snapButtonNormal != null && _snapButtonHighlight != null && _snapButtonActive != null)
+            if (snapOnIcon != null && snapOffIcon != null)
+            {
+                _SnapPanelTabIconOn = Sprite.Create(snapOnIcon, new Rect(0, 0, snapOnIcon.width, snapOnIcon.height), new Vector2(0.5f, 0.5f));
+                _SnapPanelTabIconOff = Sprite.Create(snapOffIcon, new Rect(0, 0, snapOffIcon.width, snapOffIcon.height), new Vector2(0.5f, 0.5f));
+            }
+
+            if (_inputButtonNormal != null && _inputButtonHighlight != null && _inputButtonActive != null && _snapButtonNormal != null && _snapButtonHighlight != null && _snapButtonActive != null)
 				TexturesLoaded = true;
 		}
 
@@ -287,10 +334,15 @@ namespace BetterManeuvering
 			{
 				GameObject o = loadedPrefabs[i];
 
-				if (o.name == "Input_Panel")
-					_inputPrefab = o;
-				else if (o.name == "Warp_Panel")
-					_snapPrefab = o;
+                if (o.name == "Input_Panel")
+                    _inputPrefab = o;
+                else if (o.name == "Warp_Panel")
+                    _snapPrefab = o;
+                else if (o.name == "ManeuverSnapPanel")
+                {
+                    _snapTabPrefab = o;
+                    _snapTabPrefab.AddComponent<ManeuverSnapTab>();
+                }
 
 				if (o != null)
 				{
@@ -439,6 +491,8 @@ namespace BetterManeuvering
 		{
 			parseUIWindow();
 
+            parseManeuverTab();
+
 			for (int i = loadedPrefabs.Length - 1; i >= 0; i--)
 			{
 				GameObject o = loadedPrefabs[i];
@@ -464,34 +518,66 @@ namespace BetterManeuvering
 			_lineWidth = windowPrefab.lineWidth;
 
 			Image Title = windowPrefab.titleBar.gameObject.GetComponent<Image>();
-			TitleBackground = Title.sprite;
-			TitleColor = Title.color;
+			_TitleBackground = Title.sprite;
+			_TitleColor = Title.color;
 
 			UIMaterial = Title.material;
 
 			Image Window = windowPrefab.GetComponentInChildren<Image>(true);
-			WindowBackground = Window.sprite;
-			WindowColor = Window.color;
+			_WindowBackground = Window.sprite;
+			_WindowColor = Window.color;
 
 			Toggle pin = windowPrefab.togglePinned;
 
 			Selectable pinSelect = pin.GetComponent<Selectable>();
-			ToggleNormal = pinSelect.image.sprite;
-			ToggleHightlight = pinSelect.spriteState.highlightedSprite;
-			ToggleActive = pinSelect.spriteState.pressedSprite;
-			ToggleInactive = pinSelect.spriteState.disabledSprite;
+			_ToggleNormal = pinSelect.image.sprite;
+			_ToggleHightlight = pinSelect.spriteState.highlightedSprite;
+			_ToggleActive = pinSelect.spriteState.pressedSprite;
+			_ToggleInactive = pinSelect.spriteState.disabledSprite;
 
 			Image checkmark = pin.GetComponentsInChildren<Image>(true)[1];
 
-			ToggleCheckmark = checkmark.sprite;
+			_ToggleCheckmark = checkmark.sprite;
 
 			Selectable button = buttonPrefab.button.GetComponent<Selectable>();
 
-			ButtonNormal = button.image.sprite;
-			ButtonHighlight = button.spriteState.highlightedSprite;
-			ButtonActive = button.spriteState.pressedSprite;
-			ButtonInactive = button.spriteState.disabledSprite;
+			_ButtonNormal = button.image.sprite;
+			_ButtonHighlight = button.spriteState.highlightedSprite;
+			_ButtonActive = button.spriteState.pressedSprite;
+			_ButtonInactive = button.spriteState.disabledSprite;
 		}
+
+        private void parseManeuverTab()
+        {
+            //ManeuverController.maneuverLog("1", logLevels.log);
+            for (int i = ManeuverNodeEditorManager.Instance.maneuverNodeEditorTabs.Count - 1; i >= 0; i--)
+            {
+                //ManeuverController.maneuverLog("tab: {0}", logLevels.log, i.ToString());
+                ManeuverNodeEditorTab tab = ManeuverNodeEditorManager.Instance.maneuverNodeEditorTabs[i];
+
+                if (tab is ManeuverNodeEditorTabVectorInput)
+                {
+                    ManeuverNodeEditorTabVectorInput vectorTab = tab as ManeuverNodeEditorTabVectorInput;
+                    //ManeuverController.maneuverLog("2", logLevels.log);
+                    _TabPanelBackground = null;// vectorTab.GetComponentInParent<Image>().sprite;
+                    //ManeuverController.maneuverLog("3", logLevels.log);
+                    _TabButtonBackground = vectorTab.proRetrogradeField.transform.parent.GetComponentInChildren<Image>().sprite;
+                    //ManeuverController.maneuverLog("4", logLevels.log);
+                    _TabTextBackground = vectorTab.proRetrogradeField.GetComponent<Image>().sprite;
+                }
+                else if (tab is ManeuverNodeEditorTabVectorHandles)
+                {
+                    ManeuverNodeEditorTabVectorHandles handleTab = tab as ManeuverNodeEditorTabVectorHandles;
+                    //ManeuverController.maneuverLog("Handle Tab: {0}", logLevels.log, handleTab.name);
+                    Selectable orbitButton = handleTab.GetComponentInChildren<Selectable>();
+                    //ManeuverController.maneuverLog("Orbit Button: {0}", logLevels.log, orbitButton.name);
+                    _TabOrbitButtonNormal = orbitButton.image.sprite;
+                    _TabOrbitButtonHighlight = orbitButton.spriteState.highlightedSprite;
+                    _TabOrbitButtonActive = orbitButton.spriteState.pressedSprite;
+                    _TabOrbitButtonInactive = orbitButton.spriteState.disabledSprite;
+                }
+            }
+        }
 
 		private void processUIComponents(GameObject obj)
 		{
@@ -512,17 +598,34 @@ namespace BetterManeuvering
 			switch (style.ElementType)
 			{
 				case ManeuverStyle.ElementTypes.Window:
-					style.setImage(WindowBackground, UIMaterial, WindowColor);
+					style.setImage(_WindowBackground, UIMaterial, _WindowColor);
 					break;
 				case ManeuverStyle.ElementTypes.Box:
-					style.setImage(TitleBackground, UIMaterial, TitleColor);
+					style.setImage(_TitleBackground, UIMaterial, _TitleColor);
 					break;
 				case ManeuverStyle.ElementTypes.Button:
-					style.setButton(ButtonNormal, ButtonHighlight, ButtonActive, ButtonInactive);
+					style.setButton(_ButtonNormal, _ButtonHighlight, _ButtonActive, _ButtonInactive);
 					break;
 				case ManeuverStyle.ElementTypes.Toggle:
-					style.setToggle(ToggleNormal, ToggleCheckmark);
+					style.setToggle(_ToggleNormal, _ToggleCheckmark);
 					break;
+                case ManeuverStyle.ElementTypes.TabBackground:
+                    style.setImage(_TabPanelBackground);
+                    break;
+                case ManeuverStyle.ElementTypes.TabButtonBackground:
+                    style.setImage(_TabButtonBackground);
+                    break;
+                case ManeuverStyle.ElementTypes.TabTextBackground:
+                    style.setImage(_TabTextBackground);
+                    break;
+                case ManeuverStyle.ElementTypes.ResetButton:
+                    style.setButton(_TabOrbitButtonNormal, _TabOrbitButtonHighlight, _TabOrbitButtonActive, _TabOrbitButtonInactive, Image.Type.Simple);
+                    break;
+                case ManeuverStyle.ElementTypes.ScrollBar:
+                    UISkinDef skin = UISkinManager.defaultSkin;
+
+                    style.setScrollbar(skin.verticalScrollbar.normal.background, skin.verticalScrollbarThumb.normal.background);
+                    break;
 				default:
 					break;
 			}
